@@ -2,5 +2,8 @@
   "name": "noritus",
   "compatibility_date": "2026-09-01",
   "assets": { "directory": "./dist", "not_found_handling": "single-page-application" },
-  "routes": [{ "pattern": "noritus.dpdns.org", "custom_domain": true }]
+  "routes": [{ "pattern": "noritus.dpdns.org", "custom_domain": true }],
+  // Served only on the custom domain; Supabase sign-in redirects only allow it.
+  "workers_dev": false,
+  "preview_urls": false
 }
