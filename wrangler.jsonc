@@ -1,5 +1,6 @@
 {
   "name": "noritus",
   "compatibility_date": "2026-09-01",
-  "assets": { "directory": "./dist", "not_found_handling": "single-page-application" }
+  "assets": { "directory": "./dist", "not_found_handling": "single-page-application" },
+  "routes": [{ "pattern": "noritus.dpdns.org", "custom_domain": true }]
 }
