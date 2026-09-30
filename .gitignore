@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.wrangler/
+scripts/check.mjs
+*.local
+.env
+.env.*
+!.env.example
+.vscode/*
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# local-only notes and design reference
+CLAUDE.md
+docs/
+prototype.html
