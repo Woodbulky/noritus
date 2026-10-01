@@ -3,7 +3,7 @@ import type { User } from '@supabase/supabase-js'
 import { authConfigured, hasSession, signIn, signOut, watchUser } from '../lib/auth'
 import { Brand } from './Logo'
 
-export default function Header() {
+export default function Header({ path }: { path: string }) {
   const ref = useRef<HTMLElement>(null)
   const line = useRef<HTMLDivElement>(null)
   const [user, setUser] = useState<User | null>(null)
@@ -53,9 +53,14 @@ export default function Header() {
       <div className="container header-inner">
         <Brand />
         <nav className="nav" aria-label="Main navigation">
-          <a href="/#tools">The toolbox</a>
+          <a href="/tools" aria-current={path === 'tools' ? 'page' : undefined}>
+            The toolbox
+          </a>
           <a href="/#how">How it works</a>
-          <a href="/privacy">Privacy first</a>
+          <a href="/privacy" aria-current={path === 'privacy' ? 'page' : undefined}>
+            Privacy first
+          </a>
+          <a href="/#faq">Questions</a>
         </nav>
         <div className="header-action">
           {user ? (
@@ -82,9 +87,12 @@ export default function Header() {
               </button>
             )
           )}
-          <a className="btn btn-primary" href="/#tools" data-magnet>
-            Find your tool <span className="arrow">↗</span>
-          </a>
+          {path !== 'tools' && (
+            <a className="btn btn-primary" href="/tools" data-magnet>
+              <span className="wide-only">Open the toolbox</span>
+              <span className="narrow-only">Toolbox</span> <span className="arrow">↗</span>
+            </a>
+          )}
         </div>
       </div>
       <div className="progress-line" ref={line} />

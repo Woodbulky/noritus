@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /pdfjs/
 
 Sitemap: https://noritus.dpdns.org/sitemap.xml

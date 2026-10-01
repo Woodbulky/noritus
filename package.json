@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && esbuild scripts/prerender.ts --bundle --platform=node --format=esm --outfile=scripts/out/prerender.mjs --external:./tools/* --log-level=warning && node scripts/out/prerender.mjs",
     "preview": "vite preview",
     "lint": "oxlint",
     "check": "esbuild scripts/check.ts --bundle --platform=node --format=esm --outfile=scripts/check.mjs --external:fontkit --log-level=warning && node scripts/check.mjs"

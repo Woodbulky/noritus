@@ -1,4 +1,4 @@
-/** Recent and favourite tools: slugs only, kept in this browser's localStorage. Never synced. */
+/** Recent and favourite tools (slugs only) and the toolbox layout, kept in this browser's localStorage. Never synced. */
 
 function read(key: string): string[] {
   try {
@@ -29,3 +29,7 @@ export function toggleFavourite(slug: string) {
   write('noritus:favourites', on ? [slug, ...f] : f.filter((s) => s !== slug))
   return on
 }
+
+/** Toolbox layout: 'grid' (default) or 'list'. */
+export const toolboxView = () => (read('noritus:view')[0] === 'list' ? 'list' : 'grid')
+export const setToolboxView = (v: 'grid' | 'list') => write('noritus:view', [v])

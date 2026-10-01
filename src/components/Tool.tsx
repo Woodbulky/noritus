@@ -13,7 +13,7 @@ export function Room({ slug, faq, children }: { slug: string; faq: [string, stri
   const [fav, setFav] = useState(() => favourites().includes(slug))
   return (
     <div className="container room">
-      <a className="back-button" href="/#tools">
+      <a className="back-button" href="/tools">
         ← Back to the toolbox
       </a>
       <div className="room-head">
@@ -32,6 +32,16 @@ export function Room({ slug, faq, children }: { slug: string; faq: [string, stri
         </div>
       </div>
       {children}
+      <nav className="related" aria-label={`More ${CAT_LABEL[tool.category]} tools`}>
+        <span className="eyebrow">More {CAT_LABEL[tool.category]} tools</span>
+        <div className="chips">
+          {TOOLS.filter((t) => t.category === tool.category && t.slug !== slug && t.load).map((t) => (
+            <a key={t.slug} className="chip" href={`/${t.slug}`}>
+              <Icon name={t.icon} /> {t.name}
+            </a>
+          ))}
+        </div>
+      </nav>
       <section className="faq-layout tool-faq" aria-label="Questions">
         <div>
           <div className="eyebrow">A few good questions</div>

@@ -20,7 +20,7 @@ export default function ToolPage({ tool }: { tool: Tool }) {
 
   return (
     <div className="container room">
-      <a className="back-button" href="/#tools">
+      <a className="back-button" href="/tools">
         ← Back to the toolbox
       </a>
       <div className="room-head">

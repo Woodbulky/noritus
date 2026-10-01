@@ -1,138 +1,39 @@
-import { useEffect, useRef, useState } from 'react'
-import { CATEGORIES, TOOLS, type Tool } from '../tools'
-import { filterTools } from '../lib/search'
-import { favourites, recents } from '../lib/prefs'
-import Icon from './Icon'
-import { useFlip } from './useFlip'
+import { useEffect, useRef } from 'react'
+import { CAT_CAPTION, FLOWS, kindId, TOOLS, type Category, type Tool } from '../tools'
+import Icon, { type IconName } from './Icon'
 import { Mark } from './Logo'
 
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
 const VERBS = ['Merge', 'Convert', 'Trim', 'Sign', 'Compress', 'Certify']
 const FORMATS = ['PDF', 'MP3', 'MP4', 'JPG', 'PNG', 'WEBP', 'GIF', 'WAV', 'AAC', 'HEIC', 'CSV', 'XLSX', 'ZIP', 'QR', 'MOV', 'WEBM']
-const FEATURED = 6
 const SHORTCUTS = ['pdf-merge', 'compress-video', 'certify']
 
-/** Toolbox filters survive a trip to a tool and back (in memory, this tab only). */
-const kept = { cat: 'all', query: '', expanded: false }
+/** The landing page's overview of each kind: a few well-known tools, and a link to the rest. */
+const KINDS: { id: Category; name: string; icon: IconName; text?: string; slugs: string[] }[] = [
+  {
+    id: 'PDF',
+    name: 'PDF & documents',
+    icon: 'file',
+    text: 'Merge, split, sign, compress and tidy. A little order for every page, from the first draft to the final submit.',
+    slugs: ['pdf-merge', 'pdf-compress', 'pdf-split', 'pdf-sign', 'images-to-pdf', 'pdf-organize', 'pdf-ocr', 'pdf-fill-form', 'pdf-redact', 'pdf-protect'],
+  },
+  { id: 'Media', name: 'Audio & video', icon: 'music', slugs: ['mp4-to-mp3', 'compress-video', 'trim-media'] },
+  { id: 'Image', name: 'Images', icon: 'image', slugs: ['image-compress', 'image-resize', 'image-convert'] },
+  { id: 'Generate', name: 'Generators', icon: 'award', slugs: ['certify', 'invitations', 'qr-generator'] },
+  { id: 'Utility', name: 'Utilities', icon: 'hash', slugs: ['word-counter', 'spreadsheet-convert', 'text-diff'] },
+]
+
+const FAQ: [string, string][] = [
+  ['Do I need to make an account?', 'No. Every tool works without one. Signing in with Google is optional, and nothing is locked behind it.'],
+  ['Is it really free?', 'Yes. Noritus is free and open source under the MIT licence. There is no paid tier and no watermark on your results.'],
+  ['Do my files go anywhere?', 'No. They are processed inside your browser tab and never uploaded. Open your browser’s Network tab while you use a tool and see for yourself.'],
+  ['Does it work offline?', 'Once a tool has loaded, yes. The work happens on your device, so there is nothing to wait for from a server.'],
+  ['Does it work on my phone?', 'Yes. Every tool works in a modern mobile browser. Very large videos are quicker on a laptop, since your own device does the work.'],
+  ['Is there a file size limit?', 'Only your device’s memory. There is no upload, so there is no upload limit.'],
+]
 
 const bySlug = (slugs: string[]) => slugs.map((s) => TOOLS.find((t) => t.slug === s && t.load)).filter((t): t is Tool => !!t)
-
-function ToolChip({ tool, star }: { tool: Tool; star?: boolean }) {
-  return (
-    <a className="chip" href={`/${tool.slug}`}>
-      <Icon name={tool.icon} /> {tool.name}
-      {star && <span aria-label="favourite"> ★</span>}
-    </a>
-  )
-}
-
-/** Favourites first, then recently opened tools, from this browser's storage. Hidden until there are some. */
-function YourTools() {
-  const [[favs, tools]] = useState(() => {
-    const f = favourites()
-    return [f, bySlug([...new Set([...f, ...recents()])]).slice(0, 8)] as const
-  })
-  if (!tools.length) return null
-  return (
-    <section className="container yours" aria-label="Your tools">
-      <span className="eyebrow">Your tools</span>
-      <div className="chips">
-        {tools.map((t) => (
-          <ToolChip key={t.slug} tool={t} star={favs.includes(t.slug)} />
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function ToolCard({ tool, i }: { tool: Tool; i: number }) {
-  return (
-    <a
-      href={`/${tool.slug}`}
-      className={`tool-card tone-${tool.category.toLowerCase()}${tool.slug === 'pdf-merge' ? ' featured' : ''}`}
-      data-flip={tool.slug}
-      style={{ '--i': i } as React.CSSProperties}
-    >
-      <div className="card-top">
-        <span className="tool-icon">
-          <Icon name={tool.icon} />
-        </span>
-        <span className={tool.load ? 'status live' : 'status'}>{tool.load ? 'Open ↗' : 'Coming soon'}</span>
-      </div>
-      <h3>{tool.name}</h3>
-      <p>{tool.blurb}</p>
-      <span className="card-arrow" aria-hidden="true">
-        ↗
-      </span>
-    </a>
-  )
-}
-
-function Toolbox() {
-  const [cat, setCat] = useState(kept.cat)
-  const [query, setQuery] = useState(kept.query)
-  const [expanded, setExpanded] = useState(kept.expanded)
-  useEffect(() => void Object.assign(kept, { cat, query, expanded }), [cat, query, expanded])
-  // After the first filter change, cards fade in quickly instead of replaying the staggered entrance.
-  const [settled, setSettled] = useState(false)
-  const grid = useRef<HTMLDivElement>(null)
-  useFlip(grid, 240)
-  const results = filterTools(TOOLS, cat, query)
-  const filtered = cat !== 'all' || query.trim() !== ''
-  const shown = expanded || filtered ? results : results.slice(0, FEATURED)
-
-  return (
-    <section className="section container" id="tools">
-      <div className="section-heading" data-reveal>
-        <div>
-          <div className="eyebrow">01 / The toolbox</div>
-          <h2>A tool for your to-do.</h2>
-        </div>
-        <p>
-          The everyday essentials, all within reach.
-          <br />
-          Pick a tool and make room for what’s next.
-        </p>
-      </div>
-      <div className="tool-controls" data-reveal>
-        <div className="tabs" role="group" aria-label="Filter tools by category">
-          {CATEGORIES.map(([id, name]) => (
-            <button key={id} className={id === cat ? 'tab active' : 'tab'} aria-pressed={id === cat} onClick={() => (setCat(id), setSettled(true))}>
-              {name}
-              {id === 'all' && <span className="count">{TOOLS.length}</span>}
-            </button>
-          ))}
-        </div>
-        <label className="search-wrap">
-          <Icon name="search" />
-          <input type="search" placeholder="Merge PDF, resize photo, compress video…" aria-label="Search the toolbox" value={query} onChange={(e) => (setQuery(e.target.value), setSettled(true))} />
-        </label>
-      </div>
-      <div className={settled ? 'tools-grid settled' : 'tools-grid'} aria-live="polite" ref={grid}>
-        {shown.length ? (
-          shown.map((t, i) => <ToolCard key={t.slug} tool={t} i={i} />)
-        ) : (
-          <p className="no-results">No tools found. Try “PDF”, “image”, or “audio”.</p>
-        )}
-      </div>
-      {!filtered && (
-        <div className="tools-bottom">
-          <button className="text-link" onClick={() => (setExpanded(!expanded), setSettled(true))}>
-            {expanded ? (
-              <>
-                Show the essentials <span>↑</span>
-              </>
-            ) : (
-              <>
-                Explore all {TOOLS.length} tools <span>↗</span>
-              </>
-            )}
-          </button>
-        </div>
-      )}
-    </section>
-  )
-}
+const countOf = (c: Category) => TOOLS.filter((t) => t.category === c).length
 
 function HeroArt() {
   const art = useRef<HTMLDivElement>(null)
@@ -278,15 +179,27 @@ function Morph() {
 }
 
 export default function Home() {
-  // Sections fade up as they enter view; the padlock snaps shut and the netlog types in.
+  // Sections fade up as they enter view; the padlock snaps shut, the netlog types in and the tool count ticks up.
   useEffect(() => {
     const io = new IntersectionObserver(
       (entries) =>
         entries.forEach((e) => {
           if (!e.isIntersecting) return
-          e.target.classList.add('in')
-          io.unobserve(e.target)
-          if (e.target.classList.contains('privacy-art')) setTimeout(() => e.target.classList.add('locked'), 500)
+          const el = e.target as HTMLElement
+          el.classList.add('in')
+          io.unobserve(el)
+          if (el.classList.contains('privacy-art')) setTimeout(() => el.classList.add('locked'), reduce ? 0 : 500)
+          el.querySelectorAll<HTMLElement>('[data-count]').forEach((b) => {
+            if (reduce) return
+            const to = Number(b.dataset.count)
+            const t0 = performance.now()
+            const tick = (t: number) => {
+              const p = Math.min((t - t0) / 1100, 1)
+              b.textContent = String(Math.round(to * (1 - (1 - p) ** 3)))
+              if (p < 1) requestAnimationFrame(tick)
+            }
+            requestAnimationFrame(tick)
+          })
         }),
       { threshold: 0.18 },
     )
@@ -299,11 +212,11 @@ export default function Home() {
   const ri = (n: number) => ({ '--i': n }) as React.CSSProperties
 
   return (
-    <>
+    <div className="landing">
       <section className="container hero">
-        <div className="hero-copy">
+        <div>
           <div className="eyebrow fade-up" style={k(0)}>
-            <span className="dot" /> Small tools. A little more freedom.
+            <span className="dot" /> Free PDF, image & video tools. Nothing uploaded.
           </div>
           <h1 aria-label="A little less file friction. A lot more flow.">
             <span className="ln" style={l(0)}>
@@ -321,24 +234,26 @@ export default function Home() {
               </em>
             </span>
           </h1>
-          <p className="fade-up" style={k(1)}>
-            Your everyday file tools, in one quietly powerful place. <Morph /> it, right in your browser.
+          <p className="lede fade-up" style={k(1)}>
+            Your everyday file tools, in one quietly powerful place. <Morph /> it, right in your browser. Your files never leave your device.
           </p>
           <div className="hero-actions fade-up" style={k(2)}>
-            <a className="btn btn-primary" href="#tools" data-magnet>
+            <a className="btn btn-primary" href="/tools" data-magnet>
               Find your tool <span className="arrow">↗</span>
             </a>
             <a className="text-link" href="#how">
               See how it works <span>↓</span>
             </a>
           </div>
-          <div className="shortcuts fade-up" style={k(3)}>
+          <div className="popular fade-up" style={k(3)}>
             <span className="muted">Popular:</span>
             {bySlug(SHORTCUTS).map((t) => (
-              <ToolChip key={t.slug} tool={t} />
+              <a key={t.slug} className="chip" href={`/${t.slug}`}>
+                <Icon name={t.icon} /> {t.name}
+              </a>
             ))}
           </div>
-          <div className="hero-note fade-up" style={k(4)}>
+          <div className="ticks fade-up" style={k(4)}>
             <span>
               <Icon name="check" /> Free & open source
             </span>
@@ -352,8 +267,6 @@ export default function Home() {
         </div>
         <HeroArt />
       </section>
-
-      <YourTools />
 
       <div className="trust-strip">
         <div className="container trust-inner">
@@ -382,12 +295,106 @@ export default function Home() {
         </div>
       </div>
 
-      <Toolbox />
+      <section className="section container" id="inside">
+        <div className="section-head" data-reveal>
+          <div>
+            <div className="eyebrow">
+              <span className="num">01</span> / What’s inside
+            </div>
+            <h2>
+              One toolbox.
+              <br />
+              Every everyday file.
+            </h2>
+          </div>
+          <p>{TOOLS.length} small, focused tools for the files you meet every day. Each one opens in a second and does one job well.</p>
+        </div>
+        <div className="bento">
+          {KINDS.map((kind, i) => (
+            <article key={kind.id} className={i ? 'kind' : 'kind feature'} data-reveal style={ri(i)}>
+              <div className="kind-top">
+                <span className="kind-icon">
+                  <Icon name={kind.icon} />
+                </span>
+                <span className="kind-count">{countOf(kind.id)} tools</span>
+              </div>
+              <h3>{kind.name}</h3>
+              <p>{kind.text ?? CAT_CAPTION[kind.id]}</p>
+              <div className="kind-tools">
+                {bySlug(kind.slugs).map((t) => (
+                  <a key={t.slug} href={`/${t.slug}`}>
+                    {t.name}
+                  </a>
+                ))}
+              </div>
+              {!i && (
+                <div className="sheets" aria-hidden="true">
+                  <i />
+                  <i />
+                  <i>
+                    <b>.PDF</b>
+                  </i>
+                </div>
+              )}
+              <a className="kind-more" href={`/tools#${kindId(kind.id)}`}>
+                {i ? 'See all' : `All ${countOf(kind.id)} PDF tools`} <Icon name="arrow" />
+              </a>
+            </article>
+          ))}
+        </div>
+        <div className="bento-foot" data-reveal>
+          <a className="btn btn-primary" href="/tools" data-magnet>
+            Browse all {TOOLS.length} tools <span className="arrow">↗</span>
+          </a>
+        </div>
+      </section>
+
+      <section className="section days" id="day">
+        <div className="container">
+          <div className="section-head" data-reveal>
+            <div>
+              <div className="eyebrow">
+                <span className="num">02</span> / Made for your day
+              </div>
+              <h2>
+                Start with the job,
+                <br />
+                not the file type.
+              </h2>
+            </div>
+            <p>A few everyday jobs, with the tools you’ll need lined up in order. Finish one step, and your file is handed to the next.</p>
+          </div>
+          <div className="day-grid">
+            {FLOWS.map((f, i) => (
+              <article key={f.id} className="day" data-reveal style={ri(i)}>
+                <span className="day-num">No. 0{i + 1}</span>
+                <h3>{f.title}</h3>
+                <p>{f.text}</p>
+                <ol className="path">
+                  {bySlug(f.slugs)
+                    .slice(0, 4)
+                    .map((t, n) => (
+                      <li key={t.slug}>
+                        <span>{n + 1}</span>
+                        {t.name}
+                      </li>
+                    ))}
+                </ol>
+                <a className="text-link" href={`/tools#day-${f.id}`}>
+                  Start here <span>↗</span>
+                </a>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <section className="section process" id="how">
         <div className="container process-layout">
           <div className="process-intro" data-reveal>
-            <div className="eyebrow">02 / Refreshingly simple</div>
+            <div className="eyebrow">
+              <span className="num">03</span> / Refreshingly simple
+            </div>
             <h2>
               Less clicking.
               <br />
@@ -395,7 +402,7 @@ export default function Home() {
             </h2>
             <p>No queues. No email attachments. Just you, your browser, and a job well done.</p>
           </div>
-          <div className="steps" data-reveal>
+          <div className="steps" data-reveal style={ri(2)}>
             <div className="step">
               <span className="step-number">1</span>
               <h3>Bring your file.</h3>
@@ -428,12 +435,10 @@ export default function Home() {
           <span className="privacy-label">✳ Personal means personal.</span>
         </div>
         <div className="privacy-copy" data-reveal style={ri(2)}>
-          <div className="eyebrow">03 / Yours, always</div>
-          <h2>
-            Some things should
-            <br />
-            stay with you.
-          </h2>
+          <div className="eyebrow">
+            <span className="num">04</span> / Yours, always
+          </div>
+          <h2>Some things should stay with you.</h2>
           <p>
             Your documents. Your photos. That recording from yesterday. Noritus is built around a simple idea: your files belong on your device. Don’t take our word for it.
           </p>
@@ -469,30 +474,66 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="container faq-layout" id="faq">
-        <div data-reveal>
-          <div className="eyebrow">A few good questions</div>
-          <h2>Glad you asked.</h2>
-        </div>
-        <div className="faq" data-reveal style={ri(2)}>
-          <details>
-            <summary>Do I need to make an account?</summary>
-            <p>No. Every tool works without one. Signing in with Google is optional, and nothing is locked behind it.</p>
-          </details>
-          <details>
-            <summary>Is it really free?</summary>
-            <p>Yes. Noritus is free and open source under the MIT licence.</p>
-          </details>
-          <details>
-            <summary>Do my files go anywhere?</summary>
-            <p>No. They are processed inside your browser tab and never uploaded. Open your browser’s Network tab while you use a tool and see for yourself.</p>
-          </details>
-          <details>
-            <summary>Does it work offline?</summary>
-            <p>Once a tool has loaded, yes. The work happens on your device, so there is nothing to wait for from a server.</p>
-          </details>
+      <section className="numbers" aria-label="Noritus in numbers">
+        <div className="container numbers-inner">
+          <div className="stat" data-reveal>
+            <b data-count={TOOLS.length}>{TOOLS.length}</b>
+            <span>everyday tools, and growing</span>
+          </div>
+          <div className="stat" data-reveal style={ri(1)}>
+            <b>
+              <em>0</em>
+            </b>
+            <span>files uploaded. Ever.</span>
+          </div>
+          <div className="stat" data-reveal style={ri(2)}>
+            <b>0</b>
+            <span>accounts needed to use any tool</span>
+          </div>
+          <div className="stat" data-reveal style={ri(3)}>
+            <b>MIT</b>
+            <span>open source, free to inspect</span>
+          </div>
         </div>
       </section>
-    </>
+
+      <section className="section container faq-layout" id="faq">
+        <div className="side" data-reveal>
+          <div className="eyebrow">
+            <span className="num">05</span> / A few good questions
+          </div>
+          <h2>Glad you asked.</h2>
+          <p>Anything else? The code is open, so every answer can be checked.</p>
+        </div>
+        <div className="faq" data-reveal style={ri(2)}>
+          {FAQ.map(([q, a]) => (
+            <details key={q}>
+              <summary>{q}</summary>
+              <p>{a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <section className="container cta">
+        <div className="cta-card" data-reveal>
+          <span className="cta-logo">
+            <Mark />
+          </span>
+          <h2>
+            Ready when <em>you</em> are.
+          </h2>
+          <p>Pick a tool, drop in a file, and get on with your day. No sign-up, no upload, no waiting room.</p>
+          <div className="hero-actions">
+            <a className="btn btn-primary" href="/tools" data-magnet>
+              Open the toolbox <span className="arrow">↗</span>
+            </a>
+            <a className="text-link" href="https://github.com/Woodbulky/noritus" target="_blank" rel="noopener noreferrer">
+              Read the code <span>↗</span>
+            </a>
+          </div>
+        </div>
+      </section>
+    </div>
   )
 }
