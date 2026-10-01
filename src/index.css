@@ -6,7 +6,7 @@
   --color-paper: #f7f5ee;
   --color-white: #fffefa;
   --color-ink: #183e38;
-  --color-muted: #64736a;
+  --color-muted: #5a6960;
   --color-line: #d9ded3;
   --color-teal: #145c50;
   --color-teal-deep: #10483e;
@@ -84,7 +84,8 @@ h1,h2{font-family:var(--font-serif);font-weight:400;line-height:1.04;letter-spac
 .avatar{width:34px;height:34px;border-radius:50%;background:var(--color-mint);color:var(--color-teal);font-weight:700;display:grid;place-items:center}
 
 /* ---------- page / reveal ---------- */
-.page{animation:pageIn .5s var(--ease) both}
+/* Fill backwards, not both: a leftover transform would trap the docked (position:fixed) Run button. */
+.page{animation:pageIn .5s var(--ease) backwards}
 [data-reveal]{opacity:0;transform:translateY(26px);transition:opacity .8s var(--ease),transform .8s var(--ease);transition-delay:calc(var(--i,0)*80ms)}
 [data-reveal].in{opacity:1;transform:none}
 
@@ -169,8 +170,8 @@ h1,h2{font-family:var(--font-serif);font-weight:400;line-height:1.04;letter-spac
 .tab.active{background:var(--color-ink);color:var(--color-white)}
 .tab:hover:not(.active){background:var(--color-mint);transform:translateY(-1px)}
 .count{font-size:9px;margin-left:4px;opacity:.7}
-.search-wrap{display:flex;align-items:center;gap:9px;width:240px;border-bottom:1px solid #abb8ac;padding:6px 0;transition:border-color .2s,width .3s var(--ease)}
-.search-wrap:focus-within{border-color:var(--color-teal);width:290px}
+.search-wrap{display:flex;align-items:center;gap:9px;width:300px;border-bottom:1px solid #abb8ac;padding:6px 0;transition:border-color .2s,width .3s var(--ease)}
+.search-wrap:focus-within{border-color:var(--color-teal);width:340px}
 .search-wrap .icon{width:16px;height:16px}
 .search-wrap input{width:100%;min-width:0;border:0;outline:0;background:none;font-size:12px;padding:4px}
 .tools-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;position:relative}
@@ -258,7 +259,7 @@ h1,h2{font-family:var(--font-serif);font-weight:400;line-height:1.04;letter-spac
 .workspace-note .icon{width:18px;height:18px}
 .back-button{display:inline-block;padding:0;margin-bottom:19px;color:var(--color-muted);font-size:12px;transition:color .2s,transform .2s var(--ease)}
 .back-button:hover{color:var(--color-coral);transform:translateX(-4px)}
-.workbench{border:1px solid var(--color-line);border-radius:12px;overflow:hidden;display:grid;grid-template-columns:1.5fr 1fr;background:var(--color-white);min-height:405px;animation:cardIn .6s var(--ease) both}
+.workbench{border:1px solid var(--color-line);border-radius:12px;overflow:hidden;display:grid;grid-template-columns:1.5fr 1fr;background:var(--color-white);min-height:405px;animation:cardIn .6s var(--ease) backwards}
 .file-area{padding:28px;border-right:1px solid var(--color-line);min-width:0}
 .drop-zone{padding:38px 20px;text-align:center;border-radius:9px;position:relative;transition:background .25s,transform .25s var(--ease);display:block;background:#f4f6ee;--b:#a6b8a6;background-image:linear-gradient(90deg,var(--b) 50%,transparent 0),linear-gradient(90deg,var(--b) 50%,transparent 0),linear-gradient(0deg,var(--b) 50%,transparent 0),linear-gradient(0deg,var(--b) 50%,transparent 0);background-repeat:repeat-x,repeat-x,repeat-y,repeat-y;background-size:12px 1px,12px 1px,1px 12px,1px 12px;background-position:0 0,0 100%,0 0,100% 0;animation:marchBorder 1.2s linear infinite}
 .drop-zone:hover,.drop-zone.dragover{background-color:var(--color-mint);--b:var(--color-teal);transform:scale(1.01)}
@@ -407,6 +408,31 @@ audio.media-preview{background:none}
 @keyframes stripes{to{background-position:28px 0}}
 @keyframes marchBorder{to{background-position:12px 0,-12px 100%,0 -12px,100% 12px}}
 
+/* ---------- shortcuts, your tools, continue ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:6px 12px;border:1px solid var(--color-line);border-radius:100px;background:var(--color-white);font-size:12px;font-weight:600;transition:border-color .2s,background .2s,transform .2s var(--ease)}
+.chip .icon{width:15px;height:15px;color:var(--color-teal)}
+.chip:hover{border-color:var(--color-teal);background:var(--color-mint);transform:translateY(-1px)}
+.shortcuts{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:22px;font-size:12px}
+.yours{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;padding:0 0 28px}
+.room-badges{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.fav{cursor:pointer;transition:border-color .2s,background .2s}
+.fav:hover,.fav[aria-pressed=true]{border-color:var(--color-teal);background:var(--color-mint)}
+.preview-link{font-size:11px;margin-top:6px}
+.continue{display:grid;gap:2px}
+.continue .option-label{margin-bottom:6px}
+.run-slot{min-height:48px;display:flex;flex-direction:column}
+/* Once files are in, the drop zone shrinks to a slim "add more" bar so the list and settings get the room. */
+.file-area:has(.file-row) .drop-zone{padding:14px 16px}
+.file-area:has(.file-row) .drop-zone .upload-icon,.file-area:has(.file-row) .drop-zone p{display:none}
+.file-area:has(.file-row) .drop-zone strong{font-size:17px;margin:0}
+.file-area:has(.file-row) .drop-zone.dragover p{display:block}
+@media(pointer:coarse){
+  .row-btn,.remove-file{width:40px;height:40px}
+  .tab{padding:11px 14px}.segmented button{padding:11px 5px}
+  .chip{min-height:42px}
+}
+
 /* ---------- responsive ---------- */
 @media(max-width:1100px){
   .container{width:calc(100% - 56px)}.header-inner{gap:22px}.nav{gap:19px}
@@ -428,12 +454,17 @@ audio.media-preview{background:none}
   .header-action{gap:12px}.header-action .btn{font-size:11px;padding:8px 12px;min-height:38px;gap:8px}.sign-in{font-size:11px}
   .hero h1{font-size:56px}.art-wrap{--s:.64}
   .trust-inner{display:grid;grid-template-columns:1fr 1fr;gap:15px 10px}.trust-inner span{font-size:10px;gap:7px}
-  .section{padding:48px 0}.section-heading{display:block}.section-heading>p{margin-top:15px;max-width:none}
-  .tools-grid{grid-template-columns:1fr;gap:11px}.tool-card{min-height:152px;padding:20px}.card-top{margin-bottom:15px}
+  .section{padding:40px 0}.section-heading{display:block}.section-heading>p{margin-top:15px;max-width:none}
+  .tools-grid{grid-template-columns:1fr;gap:8px}
   .steps{grid-template-columns:1fr;gap:24px}.steps::before{display:none}
   .step{display:grid;grid-template-columns:40px 1fr;column-gap:20px}.step-number{grid-row:1/3;margin:0}.step h3{margin-bottom:5px}
   .footer-inner{flex-wrap:wrap;gap:12px 20px}.footer p{margin:0;font-size:10px}
-  .room{padding:26px 0 48px}.room h1{font-size:40px}.room-head>.pill{display:none}
+  .room{padding:26px 0 48px}.room h1{font-size:40px}.room-head{flex-wrap:wrap}.room-badges{align-items:flex-start}.room-badges>span.pill{display:none}
+  .run-slot.docked .btn{position:fixed;left:18px;right:18px;bottom:12px;width:auto;z-index:30;box-shadow:0 4px 0 var(--color-teal-deep),0 12px 30px -8px #183e3888}
+  .section-heading h2{font-size:36px}.hero{padding-bottom:24px}
+  .tool-card{min-height:0;padding:14px 16px;display:grid;grid-template-columns:auto 1fr;column-gap:14px;align-items:center}
+  .tool-card .card-top{display:contents}.tool-card .status,.tool-card .card-arrow{display:none}
+  .tool-card .tool-icon{grid-row:1/3}.tool-card h3{margin:0;font-size:15px}.tool-card p{padding:0}
   .workbench{grid-template-columns:1fr}.file-area{border-right:0;border-bottom:1px solid var(--color-line)}
   .file-area,.options{padding:20px}
   .side-by-side{grid-template-columns:1fr}.page-grid{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}

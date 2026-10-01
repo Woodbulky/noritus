@@ -1,6 +1,8 @@
-import { useId, useRef, useState, type DragEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type DragEvent, type ReactNode, type RefObject } from 'react'
 import { CAT_LABEL, TOOLS } from '../tools'
 import { download, formatBytes } from '../lib/files'
+import { accepts, handOff, takeHandoff, viewableType } from '../lib/handoff'
+import { favourites, toggleFavourite } from '../lib/prefs'
 import Icon from './Icon'
 import type { Job, JobResult, Stage } from './useJob'
 import { keyOf, useFlip } from './useFlip'
@@ -8,6 +10,7 @@ import { keyOf, useFlip } from './useFlip'
 /** The tool page contract: heading, the workbench, then a few FAQ lines. */
 export function Room({ slug, faq, children }: { slug: string; faq: [string, string][]; children: ReactNode }) {
   const tool = TOOLS.find((t) => t.slug === slug)!
+  const [fav, setFav] = useState(() => favourites().includes(slug))
   return (
     <div className="container room">
       <a className="back-button" href="/#tools">
@@ -19,9 +22,14 @@ export function Room({ slug, faq, children }: { slug: string; faq: [string, stri
           <h1>{tool.name}.</h1>
           <p>{tool.blurb}</p>
         </div>
-        <span className="pill">
-          <Icon name="lock" /> Stays on your device
-        </span>
+        <div className="room-badges">
+          <span className="pill">
+            <Icon name="lock" /> Stays on your device
+          </span>
+          <button className="pill fav" aria-pressed={fav} onClick={() => setFav(toggleFavourite(slug))}>
+            <span aria-hidden="true">{fav ? '★' : '☆'}</span> {fav ? 'In your favourites' : 'Add to favourites'}
+          </button>
+        </div>
       </div>
       {children}
       <section className="faq-layout tool-faq" aria-label="Questions">
@@ -42,16 +50,6 @@ export function Room({ slug, faq, children }: { slug: string; faq: [string, stri
   )
 }
 
-function accepts(file: { name: string; type: string }, accept: string) {
-  const name = file.name.toLowerCase()
-  return accept.split(',').some((raw) => {
-    const a = raw.trim().toLowerCase()
-    if (a.startsWith('.')) return name.endsWith(a)
-    if (a.endsWith('/*')) return file.type.startsWith(a.slice(0, -1))
-    return file.type === a
-  })
-}
-
 type Hover = { total: number; fit: number }
 
 /**
@@ -64,16 +62,23 @@ function hover(e: DragEvent, accept: string, multiple?: boolean): Hover {
   return { total: items.length, fit: multiple ? fit : Math.min(fit, 1) }
 }
 
-/** A drop zone that is also a native file input. While dragging it says what will be added; files not matching `accept` are skipped with a note. */
+/**
+ * A drop zone that is also a native file input. While dragging it says what will be added; files not matching `accept` are skipped with a note.
+ * On arrival it takes a result handed over by the previous tool.
+ */
 export function Dropzone({ accept, multiple, what, onFiles }: { accept: string; multiple?: boolean; what: string; onFiles: (files: File[]) => void }) {
   const [over, setOver] = useState<Hover | null>(null)
   const [note, setNote] = useState('')
-  const take = (list: FileList | null) => {
-    const all = [...(list ?? [])]
+  const take = (all: File[]) => {
     const ok = all.filter((f) => accepts(f, accept)).slice(0, multiple ? undefined : 1)
     setNote(ok.length < all.length ? (multiple ? `Some files were skipped. Please choose ${what}.` : ok.length ? 'Only the first file was used.' : `Please choose one of: ${what}.`) : '')
     if (ok.length) onFiles(ok)
   }
+  useEffect(() => {
+    const f = takeHandoff()
+    if (f) take([f])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
+  }, [])
 
   let head = 'A little drop goes a long way.'
   let sub = `Drag ${multiple ? 'files' : 'a file'} here, or click to browse`
@@ -94,7 +99,7 @@ export function Dropzone({ accept, multiple, what, onFiles }: { accept: string; 
         onDrop={(e) => {
           e.preventDefault()
           setOver(null)
-          take(e.dataTransfer.files)
+          take([...e.dataTransfer.files])
         }}
       >
         <span className="upload-icon">
@@ -103,7 +108,7 @@ export function Dropzone({ accept, multiple, what, onFiles }: { accept: string; 
         <strong>{head}</strong>
         <p>{sub}</p>
         <p style={{ marginTop: 10 }}>{what} · Kept in this tab</p>
-        <input type="file" accept={accept} multiple={multiple} aria-label={`Choose ${what}`} onChange={(e) => (take(e.target.files), (e.target.value = ''))} />
+        <input type="file" accept={accept} multiple={multiple} aria-label={`Choose ${what}`} onChange={(e) => (take([...(e.target.files ?? [])]), (e.target.value = ''))} />
       </label>
       <div className="feedback" role="status">
         {note}
@@ -185,15 +190,82 @@ export function Field({ label, children, hint }: { label: string; children: Reac
   )
 }
 
+/** On phones the primary button docks to the bottom of the screen while the workbench is in view but the button's own spot isn't. */
+function useDocked(slot: RefObject<HTMLDivElement | null>) {
+  const [docked, setDocked] = useState(false)
+  useEffect(() => {
+    const el = slot.current
+    const bench = el?.closest('.workbench')
+    if (!el || !bench) return
+    const seen = new Map<Element, boolean>()
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => seen.set(e.target, e.isIntersecting))
+      setDocked(!!seen.get(bench) && !seen.get(el))
+    })
+    io.observe(el)
+    io.observe(bench)
+    return () => io.disconnect()
+  }, [slot])
+  return docked
+}
+
+/** Opens a result in a new tab, for the types a browser shows inline. URLs live until the tool page closes. */
+function PreviewLink({ result }: { result: JobResult }) {
+  const type = viewableType(result.name)
+  const urls = useRef<string[]>([])
+  useEffect(() => () => urls.current.forEach((u) => URL.revokeObjectURL(u)), [])
+  if (!type) return null
+  const open = () => {
+    const u = URL.createObjectURL(new Blob([result.blob], { type }))
+    urls.current.push(u)
+    window.open(u, '_blank')
+  }
+  return (
+    <button className="text-link preview-link" onClick={open}>
+      Preview <span aria-hidden="true">↗</span>
+    </button>
+  )
+}
+
+/** Tools that can take this result next. The file is handed over in memory; nothing is saved. */
+function ContinueWith({ result }: { result: JobResult }) {
+  const type = result.blob.type || viewableType(result.name)
+  const here = location.pathname.slice(1)
+  const next = TOOLS.filter((t) => t.load && t.takes && t.slug !== here && accepts({ name: result.name, type }, t.takes))
+  if (!next.length) return null
+  return (
+    <nav className="continue" aria-label="Continue with another tool">
+      <span className="option-label">Continue with</span>
+      <div className="chips">
+        {next.map((t) => (
+          <a
+            key={t.slug}
+            className="chip"
+            href={`/${t.slug}`}
+            onClick={(e) => e.button === 0 && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) && handOff(new File([result.blob], result.name, { type }))}
+          >
+            <Icon name={t.icon} /> {t.name}
+          </a>
+        ))}
+      </div>
+    </nav>
+  )
+}
+
 const STAGES: [Stage, string][] = [
   ['read', 'Reading'],
   ['work', 'Processing'],
   ['save', 'Preparing download'],
 ]
 
-/** Progress (honest stages, Cancel), errors, the result card, and the primary button, which becomes Download once done. */
+/**
+ * Progress (honest stages, Cancel), errors, the result card with Preview, the primary button
+ * (which becomes Download once done), and tools to continue with.
+ */
 export function RunPanel({ job, label, disabled, onRun }: { job: Job; label: string; disabled?: boolean; onRun: () => void }) {
   const [saved, setSaved] = useState<JobResult | null>(null)
+  const slot = useRef<HTMLDivElement>(null)
+  const docked = useDocked(slot)
   const s = job.state
   const pct = s.kind === 'running' && s.progress !== null ? Math.round(s.progress * 100) : null
   const at = s.kind === 'running' ? STAGES.findIndex(([k]) => k === s.stage) : -1
@@ -237,25 +309,29 @@ export function RunPanel({ job, label, disabled, onRun }: { job: Job; label: str
               <b>{formatBytes(s.result.blob.size)}</b>
               {s.result.note ? ` · ${s.result.note}` : ''}. {saved === s.result ? 'Saved to your downloads.' : 'Made on your device, ready to download.'}
             </p>
+            <PreviewLink result={s.result} />
           </div>
         </div>
       )}
-      {s.kind === 'done' ? (
-        <button
-          className="btn btn-primary"
-          data-magnet
-          onClick={() => {
-            download(s.result.blob, s.result.name)
-            setSaved(s.result)
-          }}
-        >
-          {saved === s.result ? 'Download again' : 'Download'} <span className="arrow">↓</span>
-        </button>
-      ) : (
-        <button className="btn btn-primary" data-magnet disabled={disabled || s.kind === 'running'} onClick={onRun}>
-          {label} <span className="arrow">↗</span>
-        </button>
-      )}
+      <div className={docked && (s.kind === 'done' || !disabled) ? 'run-slot docked' : 'run-slot'} ref={slot}>
+        {s.kind === 'done' ? (
+          <button
+            className="btn btn-primary"
+            data-magnet
+            onClick={() => {
+              download(s.result.blob, s.result.name)
+              setSaved(s.result)
+            }}
+          >
+            {saved === s.result ? 'Download again' : 'Download'} <span className="arrow">↓</span>
+          </button>
+        ) : (
+          <button className="btn btn-primary" data-magnet disabled={disabled || s.kind === 'running'} onClick={onRun}>
+            {label} <span className="arrow">↗</span>
+          </button>
+        )}
+      </div>
+      {s.kind === 'done' && <ContinueWith result={s.result} />}
       <p className="stay-note">Your files stay with you.</p>
     </div>
   )

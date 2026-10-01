@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Dropzone, FileRows, Room, RunPanel } from '../../components/Tool'
 import { useJob } from '../../components/useJob'
 import { useFlip } from '../../components/useFlip'
-import { outName, pdfBlob } from '../../lib/files'
+import { outName, pages as pageCount, pdfBlob } from '../../lib/files'
 import { openPdf, thumbnail } from '../../lib/pdfjs'
 import { readInput, runPdf } from '../../lib/runPdf'
 
@@ -73,7 +73,7 @@ export default function PdfOrganize() {
   const run = () =>
     job.run(async (progress, signal) => {
       const bytes = await runPdf('organize', { file: await readInput(file!), pages }, progress, signal)
-      return { blob: pdfBlob(bytes), name: outName(file!.name, '-organized', 'pdf'), note: `${pages.length} pages` }
+      return { blob: pdfBlob(bytes), name: outName(file!.name, '-organized', 'pdf'), note: pageCount(pages.length) }
     })
 
   return (
@@ -81,7 +81,7 @@ export default function PdfOrganize() {
       <div className="workbench">
         <div className="file-area">
           {file ? (
-            <FileRows files={[file]} onChange={() => choose(null)} detail={() => (pages.length ? `${pages.length} pages` : 'Opening…')} />
+            <FileRows files={[file]} onChange={() => choose(null)} detail={() => (pages.length ? pageCount(pages.length) : 'Opening…')} />
           ) : (
             <Dropzone accept=".pdf,application/pdf" what="a PDF" onFiles={([f]) => choose(f)} />
           )}

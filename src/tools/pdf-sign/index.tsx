@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import { Dropzone, Field, FileRows, Room, RunPanel, Segmented } from '../../components/Tool'
 import { useJob } from '../../components/useJob'
-import { outName, pdfBlob } from '../../lib/files'
+import { outName, pages, pdfBlob } from '../../lib/files'
 import { openPdf, thumbnail, type PdfDoc } from '../../lib/pdfjs'
 import { readInput, runPdf } from '../../lib/runPdf'
 
@@ -247,7 +247,7 @@ export default function PdfSign() {
       <div className="workbench">
         <div className="file-area">
           {file ? (
-            <FileRows files={[file]} onChange={() => choose(null)} detail={() => (doc ? `${doc.numPages} pages` : 'Opening…')} />
+            <FileRows files={[file]} onChange={() => choose(null)} detail={() => (doc ? pages(doc.numPages) : 'Opening…')} />
           ) : (
             <Dropzone accept=".pdf,application/pdf" what="a PDF" onFiles={([f]) => choose(f)} />
           )}

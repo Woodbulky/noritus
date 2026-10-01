@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { CATEGORIES, TOOLS, type Tool } from '../tools'
 import { filterTools } from '../lib/search'
+import { favourites, recents } from '../lib/prefs'
 import Icon from './Icon'
 import { useFlip } from './useFlip'
 import { Mark } from './Logo'
@@ -9,6 +10,40 @@ const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
 const VERBS = ['Merge', 'Convert', 'Trim', 'Sign', 'Compress', 'Certify']
 const FORMATS = ['PDF', 'MP3', 'MP4', 'JPG', 'PNG', 'WEBP', 'GIF', 'WAV', 'AAC', 'HEIC', 'CSV', 'XLSX', 'ZIP', 'QR', 'MOV', 'WEBM']
 const FEATURED = 6
+const SHORTCUTS = ['pdf-merge', 'compress-video', 'certify']
+
+/** Toolbox filters survive a trip to a tool and back (in memory, this tab only). */
+const kept = { cat: 'all', query: '', expanded: false }
+
+const bySlug = (slugs: string[]) => slugs.map((s) => TOOLS.find((t) => t.slug === s && t.load)).filter((t): t is Tool => !!t)
+
+function ToolChip({ tool, star }: { tool: Tool; star?: boolean }) {
+  return (
+    <a className="chip" href={`/${tool.slug}`}>
+      <Icon name={tool.icon} /> {tool.name}
+      {star && <span aria-label="favourite"> ★</span>}
+    </a>
+  )
+}
+
+/** Favourites first, then recently opened tools, from this browser's storage. Hidden until there are some. */
+function YourTools() {
+  const [[favs, tools]] = useState(() => {
+    const f = favourites()
+    return [f, bySlug([...new Set([...f, ...recents()])]).slice(0, 8)] as const
+  })
+  if (!tools.length) return null
+  return (
+    <section className="container yours" aria-label="Your tools">
+      <span className="eyebrow">Your tools</span>
+      <div className="chips">
+        {tools.map((t) => (
+          <ToolChip key={t.slug} tool={t} star={favs.includes(t.slug)} />
+        ))}
+      </div>
+    </section>
+  )
+}
 
 function ToolCard({ tool, i }: { tool: Tool; i: number }) {
   return (
@@ -34,9 +69,10 @@ function ToolCard({ tool, i }: { tool: Tool; i: number }) {
 }
 
 function Toolbox() {
-  const [cat, setCat] = useState('all')
-  const [query, setQuery] = useState('')
-  const [expanded, setExpanded] = useState(false)
+  const [cat, setCat] = useState(kept.cat)
+  const [query, setQuery] = useState(kept.query)
+  const [expanded, setExpanded] = useState(kept.expanded)
+  useEffect(() => void Object.assign(kept, { cat, query, expanded }), [cat, query, expanded])
   // After the first filter change, cards fade in quickly instead of replaying the staggered entrance.
   const [settled, setSettled] = useState(false)
   const grid = useRef<HTMLDivElement>(null)
@@ -69,7 +105,7 @@ function Toolbox() {
         </div>
         <label className="search-wrap">
           <Icon name="search" />
-          <input type="search" placeholder="Find a little helper…" aria-label="Search the toolbox" value={query} onChange={(e) => (setQuery(e.target.value), setSettled(true))} />
+          <input type="search" placeholder="Merge PDF, resize photo, compress video…" aria-label="Search the toolbox" value={query} onChange={(e) => (setQuery(e.target.value), setSettled(true))} />
         </label>
       </div>
       <div className={settled ? 'tools-grid settled' : 'tools-grid'} aria-live="polite" ref={grid}>
@@ -296,7 +332,13 @@ export default function Home() {
               See how it works <span>↓</span>
             </a>
           </div>
-          <div className="hero-note fade-up" style={k(3)}>
+          <div className="shortcuts fade-up" style={k(3)}>
+            <span className="muted">Popular:</span>
+            {bySlug(SHORTCUTS).map((t) => (
+              <ToolChip key={t.slug} tool={t} />
+            ))}
+          </div>
+          <div className="hero-note fade-up" style={k(4)}>
             <span>
               <Icon name="check" /> Free & open source
             </span>
@@ -310,6 +352,8 @@ export default function Home() {
         </div>
         <HeroArt />
       </section>
+
+      <YourTools />
 
       <div className="trust-strip">
         <div className="container trust-inner">

@@ -1,6 +1,7 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { CAT_LABEL, TOOLS, type Tool } from '../tools'
 import Icon from './Icon'
+import { visit } from '../lib/prefs'
 
 // One lazy page per built tool, so each gets its own chunk.
 const PAGES = new Map(
@@ -12,6 +13,9 @@ const PAGES = new Map(
 
 export default function ToolPage({ tool }: { tool: Tool }) {
   const page = PAGES.get(tool.slug)
+  useEffect(() => {
+    if (page) visit(tool.slug)
+  }, [page, tool.slug])
   if (page) return <Suspense fallback={<div className="container room muted">Opening {tool.name}…</div>}>{page}</Suspense>
 
   return (

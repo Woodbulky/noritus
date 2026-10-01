@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Dropzone, Field, FileRows, Room, RunPanel, Segmented } from '../../components/Tool'
 import { useJob } from '../../components/useJob'
-import { outName, pdfBlob, stem } from '../../lib/files'
+import { outName, pages, pdfBlob, stem } from '../../lib/files'
 import { readInput, runPdf } from '../../lib/runPdf'
 import { sanitizeFilename } from '../../lib/sanitize'
 import { buildZip } from '../../lib/zip'
@@ -29,7 +29,7 @@ export default function PdfSplit() {
       const outs = await runPdf('split', { file: await readInput(f), ranges: mode === 'every' ? null : ranges, extract: mode === 'extract' }, progress, signal)
       if (outs.length === 1) {
         const [o] = outs
-        return { blob: pdfBlob(o.bytes), name: outName(f.name, mode === 'extract' ? '-extract' : `-${label(o.pages)}`, 'pdf'), note: `${o.pages.length} pages` }
+        return { blob: pdfBlob(o.bytes), name: outName(f.name, mode === 'extract' ? '-extract' : `-${label(o.pages)}`, 'pdf'), note: pages(o.pages.length) }
       }
       const base = sanitizeFilename(stem(f.name), 'file')
       stage('save')

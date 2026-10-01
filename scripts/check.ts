@@ -4,6 +4,7 @@
  */
 import assert from 'node:assert/strict'
 import { filterTools } from '../src/lib/search'
+import { accepts, viewableType } from '../src/lib/handoff'
 import './certify-check'
 import './pdf-check'
 import './media-check'
@@ -24,5 +25,14 @@ assert.deepEqual(names('all', 'media'), ['MP4 to MP3'], 'matches category')
 assert.deepEqual(names('all', 'mp3 sound'), ['MP4 to MP3'], 'every word, any order')
 assert.deepEqual(names('all', 'mp3 square'), [], 'all words must match')
 assert.deepEqual(names('PDF', 'qr'), [], 'category and query combine')
+assert.deepEqual(names('all', 'merge photo'), [], 'alias still needs a match')
+assert.deepEqual(filterTools([{ name: 'Resize image', blurb: '', category: 'Image' }], 'all', 'resize photo').length, 1, 'photo means image')
+
+assert.ok(accepts({ name: 'a.PDF', type: '' }, '.pdf,application/pdf'), 'extension, any case')
+assert.ok(accepts({ name: 'x', type: 'video/mp4' }, 'video/*,.mkv'), 'wildcard')
+assert.ok(!accepts({ name: 'a.zip', type: 'application/zip' }, 'image/*,.png'), 'no match')
+assert.equal(viewableType('clip.MP4'), 'video/mp4')
+assert.equal(viewableType('pages.zip'), '', 'download-only')
+assert.equal(viewableType('logo.svg'), '', 'svg never opened as a page')
 
 console.log('check: ok')

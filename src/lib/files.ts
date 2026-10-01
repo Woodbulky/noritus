@@ -23,3 +23,6 @@ export const pdfBlob = (bytes: Uint8Array) => new Blob([bytes as BlobPart], { ty
 
 /** A safe output name derived from an input: ("My scan.pdf", "-merged", "pdf") → "My scan-merged.pdf". */
 export const outName = (source: string, suffix: string, ext: string) => `${sanitizeFilename(stem(source), 'file')}${suffix}.${ext}`
+
+/** "1 page", "3 pages". */
+export const pages = (n: number) => `${n} ${n === 1 ? 'page' : 'pages'}`

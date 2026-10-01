@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Dropzone, FileRows, Room, RunPanel, Segmented } from '../../components/Tool'
 import { useJob } from '../../components/useJob'
-import { outName, pdfBlob } from '../../lib/files'
+import { outName, pages, pdfBlob } from '../../lib/files'
 import type { PageSize } from '../../lib/pdfOps'
 import { readInput, runPdf } from '../../lib/runPdf'
 
@@ -22,7 +22,7 @@ export default function ImagesToPdf() {
     job.run(async (progress, signal) => {
       const images = await Promise.all(files.map(readInput))
       const bytes = await runPdf('imagesToPdf', { images, size, margin }, progress, signal)
-      return { blob: pdfBlob(bytes), name: files.length === 1 ? outName(files[0].name, '', 'pdf') : 'images.pdf', note: `${files.length} pages` }
+      return { blob: pdfBlob(bytes), name: files.length === 1 ? outName(files[0].name, '', 'pdf') : 'images.pdf', note: pages(files.length) }
     })
 
   return (
