@@ -16,7 +16,7 @@ export default function AudioConvert({ slug, accept, what, faq }: { slug: string
   const job = useJob(files, format, kbps)
 
   const run = () =>
-    job.run(async (progress, signal) => {
+    job.run(async (progress, signal, stage) => {
       const out = `/out.${format}`
       const names = uniqueStems(files.map((f) => sanitizeFilename(stem(f.name), 'audio')))
       const entries = []
@@ -33,6 +33,7 @@ export default function AudioConvert({ slug, accept, what, faq }: { slug: string
         entries.push({ name: `${names[i]}.${format}`, bytes })
       }
       if (entries.length === 1) return { blob: new Blob([entries[0].bytes as BlobPart]), name: entries[0].name }
+      stage('save')
       return { blob: await buildZip(entries), name: `audio-${format}.zip`, note: `${entries.length} files` }
     })
 

@@ -47,6 +47,9 @@ export default function NameBox({
     const x0 = e.clientX
     const y0 = e.clientY
     ;(e.target as Element).setPointerCapture?.(e.pointerId)
+    // Classes, not state: a drag shouldn't re-render on every move just for feedback.
+    const el = ref.current!
+    el.classList.add('dragging')
 
     const move = (ev: PointerEvent) => {
       const dx = (ev.clientX - x0) / stage.width
@@ -86,6 +89,7 @@ export default function NameBox({
       }
       setBox(field, next)
       onSnap(snap)
+      el.classList.toggle('snapped', snap.x || snap.y)
     }
 
     const up = () => {
@@ -93,6 +97,7 @@ export default function NameBox({
       window.removeEventListener('pointerup', up)
       window.removeEventListener('pointercancel', up)
       onSnap({ x: false, y: false })
+      el.classList.remove('dragging', 'snapped')
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)

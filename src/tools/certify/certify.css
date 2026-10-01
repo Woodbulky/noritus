@@ -7,6 +7,8 @@
 @font-face{font-family:"Instrument Sans";font-weight:600;font-display:swap;src:url("/fonts/instrument-sans-600.ttf") format("truetype")}
 @font-face{font-family:"Bricolage Grotesque";font-weight:500;font-display:swap;src:url("/fonts/bricolage-grotesque-500.ttf") format("truetype")}
 @font-face{font-family:"Bricolage Grotesque";font-weight:700;font-display:swap;src:url("/fonts/bricolage-grotesque-700.ttf") format("truetype")}
+@keyframes guide-v{from{transform:scaleY(0)}}
+@keyframes guide-h{from{transform:scaleX(0)}}
 @keyframes toast-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
 /* The subset of Tailwind preflight the studio was built on. Layered, so any
@@ -185,11 +187,17 @@
   .stage-scroll.panning{cursor:grabbing}
   .stage{position:relative;width:100%;max-width:1100px;border-radius:6px;box-shadow:0 0 0 1px var(--color-line),0 24px 48px -28px rgba(17,17,17,.35);user-select:none;touch-action:none;background:var(--color-surface)}
   .stage canvas.art{display:block;width:100%;height:auto;border-radius:6px;pointer-events:none}
-  .box{position:absolute;display:flex;align-items:center;cursor:move;border:1.5px dashed transparent;border-radius:4px;outline:none}
+  .box{position:absolute;display:flex;align-items:center;cursor:move;border:1.5px dashed transparent;border-radius:4px;outline:none;transition:background-color .12s,box-shadow .12s}
+  .stage.edit .box:hover{background:rgba(161,229,126,.2)}
+  .stage.edit .box.dragging{background:rgba(161,229,126,.24);box-shadow:0 6px 18px -10px rgba(17,17,17,.45)}
+  .stage.edit .box.snapped{border-style:solid}
+  .box.snapped .box-label::after{content:" · centred"}
   .stage.edit .box{border-color:var(--color-accent-deep);background:rgba(161,229,126,.12)}
   .stage.edit .box:focus-visible{outline:2px solid var(--color-accent-deep);outline-offset:2px}
   .box.second{border-style:dotted}
-  .handle{position:absolute;width:14px;height:14px;border-radius:4px;background:var(--color-accent);border:1.5px solid var(--color-accent-deep);display:none}
+  .handle{position:absolute;width:14px;height:14px;border-radius:4px;background:var(--color-accent);border:1.5px solid var(--color-accent-deep);display:none;transition:transform .12s}
+  .handle:hover,.box.dragging .handle{transform:scale(1.25)}
+  @media (pointer:coarse){.handle{width:22px;height:22px;border-radius:6px}.handle.br{right:-12px!important;bottom:-12px!important}.handle.tl{left:-12px!important;top:-12px!important}}
   .stage.edit .handle{display:block}
   .handle.br{right:-8px;bottom:-8px;cursor:nwse-resize}
   .handle.tl{left:-8px;top:-8px;cursor:nwse-resize}
@@ -197,8 +205,8 @@
   .stage.edit .box-label{display:block}
   .stage-foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--color-muted)}
   .guide{position:absolute;background:var(--color-accent-deep);pointer-events:none;z-index:3}
-  .guide.v{top:0;bottom:0;width:1px}
-  .guide.h{left:0;right:0;height:1px}
+  .guide.v{top:0;bottom:0;width:1px;animation:guide-v .14s ease-out}
+  .guide.h{left:0;right:0;height:1px;animation:guide-h .14s ease-out}
   .stage-empty{display:grid;place-items:center;text-align:center;gap:6px;padding:80px 24px;border:1.5px dashed var(--color-line);border-radius:14px;background:var(--color-surface);color:var(--color-muted);font-size:14px;max-width:1100px}
   .stage-empty strong{display:block;font-family:var(--display);font-size:17px;color:var(--color-ink)}
 

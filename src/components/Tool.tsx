@@ -1,8 +1,9 @@
-import { useId, useState, type ReactNode } from 'react'
+import { useId, useRef, useState, type DragEvent, type ReactNode } from 'react'
 import { CAT_LABEL, TOOLS } from '../tools'
 import { download, formatBytes } from '../lib/files'
 import Icon from './Icon'
-import type { Job } from './useJob'
+import type { Job, JobResult, Stage } from './useJob'
+import { keyOf, useFlip } from './useFlip'
 
 /** The tool page contract: heading, the workbench, then a few FAQ lines. */
 export function Room({ slug, faq, children }: { slug: string; faq: [string, string][]; children: ReactNode }) {
@@ -41,7 +42,7 @@ export function Room({ slug, faq, children }: { slug: string; faq: [string, stri
   )
 }
 
-function accepts(file: File, accept: string) {
+function accepts(file: { name: string; type: string }, accept: string) {
   const name = file.name.toLowerCase()
   return accept.split(',').some((raw) => {
     const a = raw.trim().toLowerCase()
@@ -51,36 +52,56 @@ function accepts(file: File, accept: string) {
   })
 }
 
-/** A drop zone that is also a native file input. Files not matching `accept` are skipped with a note. */
+type Hover = { total: number; fit: number }
+
+/**
+ * What a drag over the zone carries. Browsers hide file names until the drop,
+ * so this goes by MIME type; a file with no type might still fit, so it counts.
+ */
+function hover(e: DragEvent, accept: string, multiple?: boolean): Hover {
+  const items = [...e.dataTransfer.items].filter((i) => i.kind === 'file')
+  const fit = items.filter((i) => !i.type || accepts({ name: '', type: i.type }, accept)).length
+  return { total: items.length, fit: multiple ? fit : Math.min(fit, 1) }
+}
+
+/** A drop zone that is also a native file input. While dragging it says what will be added; files not matching `accept` are skipped with a note. */
 export function Dropzone({ accept, multiple, what, onFiles }: { accept: string; multiple?: boolean; what: string; onFiles: (files: File[]) => void }) {
-  const [over, setOver] = useState(false)
+  const [over, setOver] = useState<Hover | null>(null)
   const [note, setNote] = useState('')
   const take = (list: FileList | null) => {
     const all = [...(list ?? [])]
     const ok = all.filter((f) => accepts(f, accept)).slice(0, multiple ? undefined : 1)
-    setNote(ok.length < all.length ? (multiple ? `Some files were skipped. Please choose ${what}.` : `Please choose one of: ${what}.`) : '')
+    setNote(ok.length < all.length ? (multiple ? `Some files were skipped. Please choose ${what}.` : ok.length ? 'Only the first file was used.' : `Please choose one of: ${what}.`) : '')
     if (ok.length) onFiles(ok)
   }
+
+  let head = 'A little drop goes a long way.'
+  let sub = `Drag ${multiple ? 'files' : 'a file'} here, or click to browse`
+  if (over && !over.fit) [head, sub] = ['That won’t fit here.', `This tool takes ${what}.`]
+  else if (over && over.fit < over.total) [head, sub] = multiple ? [`Drop to add ${over.fit} of ${over.total} files.`, 'The others aren’t the right kind and will be skipped.'] : ['Drop to add the first file.', 'This tool takes one at a time.']
+  else if (over) [head, sub] = [`Drop to add ${over.fit > 1 ? `${over.fit} files` : 'it'}.`, 'Let go anywhere in this box.']
+
   return (
     <>
       <label
-        className={over ? 'drop-zone dragover' : 'drop-zone'}
+        className={over ? `drop-zone dragover${over.fit ? '' : ' reject'}` : 'drop-zone'}
+        onDragEnter={(e) => setOver(hover(e, accept, multiple))}
         onDragOver={(e) => {
           e.preventDefault()
-          setOver(true)
+          e.dataTransfer.dropEffect = over?.fit === 0 ? 'none' : 'copy'
         }}
-        onDragLeave={() => setOver(false)}
+        onDragLeave={(e) => e.currentTarget.contains(e.relatedTarget as Node) || setOver(null)}
         onDrop={(e) => {
           e.preventDefault()
-          setOver(false)
+          setOver(null)
           take(e.dataTransfer.files)
         }}
       >
         <span className="upload-icon">
           <Icon name="upload" />
         </span>
-        <strong>A little drop goes a long way.</strong>
-        <p>Drag {multiple ? 'files' : 'a file'} here, or click to browse</p>
+        <strong>{head}</strong>
+        <p>{sub}</p>
         <p style={{ marginTop: 10 }}>{what} · Kept in this tab</p>
         <input type="file" accept={accept} multiple={multiple} aria-label={`Choose ${what}`} onChange={(e) => (take(e.target.files), (e.target.value = ''))} />
       </label>
@@ -91,18 +112,20 @@ export function Dropzone({ accept, multiple, what, onFiles }: { accept: string; 
   )
 }
 
-/** File list with sizes, remove, and (optionally) move up/down. */
+/** File list with sizes, remove, and (optionally) move up/down. Moved rows glide to their new place. */
 export function FileRows({ files, onChange, reorder, detail }: { files: File[]; onChange: (files: File[]) => void; reorder?: boolean; detail?: (f: File) => string }) {
+  const list = useRef<HTMLDivElement>(null)
+  useFlip(list)
   const move = (i: number, d: number) => {
     const next = [...files]
     ;[next[i], next[i + d]] = [next[i + d], next[i]]
     onChange(next)
   }
   return (
-    <div className="file-list" aria-live="polite">
+    <div className="file-list" aria-live="polite" ref={list}>
       {files.length ? (
         files.map((f, i) => (
-          <div className="file-row" key={`${f.name}:${f.size}:${f.lastModified}:${i}`}>
+          <div className="file-row" key={keyOf(f)} data-flip={keyOf(f)}>
             <Icon name="file" />
             <div className="file-info">
               <strong>{f.name}</strong>
@@ -162,22 +185,39 @@ export function Field({ label, children, hint }: { label: string; children: Reac
   )
 }
 
-/** Progress (with Cancel), errors, the result card, and the primary button, which becomes Download once done. */
+const STAGES: [Stage, string][] = [
+  ['read', 'Reading'],
+  ['work', 'Processing'],
+  ['save', 'Preparing download'],
+]
+
+/** Progress (honest stages, Cancel), errors, the result card, and the primary button, which becomes Download once done. */
 export function RunPanel({ job, label, disabled, onRun }: { job: Job; label: string; disabled?: boolean; onRun: () => void }) {
+  const [saved, setSaved] = useState<JobResult | null>(null)
   const s = job.state
   const pct = s.kind === 'running' && s.progress !== null ? Math.round(s.progress * 100) : null
+  const at = s.kind === 'running' ? STAGES.findIndex(([k]) => k === s.stage) : -1
   return (
     <div className="run">
       {s.kind === 'running' && (
-        <div className="run-progress">
-          <div className="progress" role="progressbar" aria-label="Working" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct ?? undefined}>
-            <span style={{ width: `${pct ?? 100}%` }} />
+        <>
+          <ol className="stages" aria-label="Steps">
+            {STAGES.map(([k, text], i) => (
+              <li key={k} className={i < at ? 'done' : i === at ? 'now' : undefined} aria-current={i === at ? 'step' : undefined}>
+                {text}
+              </li>
+            ))}
+          </ol>
+          <div className="run-progress">
+            <div className="progress" role="progressbar" aria-label={STAGES[at][1]} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct ?? undefined}>
+              <span style={{ width: `${pct ?? 100}%` }} />
+            </div>
+            <span className="muted">{pct === null ? 'Working…' : `${pct}%`}</span>
+            <button className="text-link" onClick={job.cancel}>
+              Cancel
+            </button>
           </div>
-          <span className="muted">{pct === null ? 'Working…' : `${pct}%`}</span>
-          <button className="text-link" onClick={job.cancel}>
-            Cancel
-          </button>
-        </div>
+        </>
       )}
       {s.kind === 'error' && (
         <p className="feedback" role="alert">
@@ -194,15 +234,22 @@ export function RunPanel({ job, label, disabled, onRun }: { job: Job; label: str
           <div style={{ minWidth: 0 }}>
             <b className="result-name">{s.result.name}</b>
             <p>
-              {formatBytes(s.result.blob.size)}
-              {s.result.note ? ` · ${s.result.note}` : ''}. Made on your device.
+              <b>{formatBytes(s.result.blob.size)}</b>
+              {s.result.note ? ` · ${s.result.note}` : ''}. {saved === s.result ? 'Saved to your downloads.' : 'Made on your device, ready to download.'}
             </p>
           </div>
         </div>
       )}
       {s.kind === 'done' ? (
-        <button className="btn btn-primary" data-magnet onClick={() => download(s.result.blob, s.result.name)}>
-          Download <span className="arrow">↓</span>
+        <button
+          className="btn btn-primary"
+          data-magnet
+          onClick={() => {
+            download(s.result.blob, s.result.name)
+            setSaved(s.result)
+          }}
+        >
+          {saved === s.result ? 'Download again' : 'Download'} <span className="arrow">↓</span>
         </button>
       ) : (
         <button className="btn btn-primary" data-magnet disabled={disabled || s.kind === 'running'} onClick={onRun}>

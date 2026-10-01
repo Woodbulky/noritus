@@ -20,7 +20,7 @@ export default function PdfToImages() {
   const job = useJob(file, format, dpi)
 
   const run = () =>
-    job.run(async (progress, signal) => {
+    job.run(async (progress, signal, stage) => {
       const f = file!
       const doc = await openPdf(f)
       try {
@@ -40,6 +40,7 @@ export default function PdfToImages() {
           progress(i / n)
         }
         if (n === 1) return { blob: last!, name: outName(f.name, '', format) }
+        stage('save')
         return { blob: await buildZip(entries), name: outName(f.name, `-${format}`, 'zip'), note: `${n} images` }
       } finally {
         void doc.loadingTask.destroy()

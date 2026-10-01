@@ -24,7 +24,7 @@ export default function PdfSplit() {
   const job = useJob(file, mode, ranges)
 
   const run = () =>
-    job.run(async (progress, signal) => {
+    job.run(async (progress, signal, stage) => {
       const f = file!
       const outs = await runPdf('split', { file: await readInput(f), ranges: mode === 'every' ? null : ranges, extract: mode === 'extract' }, progress, signal)
       if (outs.length === 1) {
@@ -32,6 +32,7 @@ export default function PdfSplit() {
         return { blob: pdfBlob(o.bytes), name: outName(f.name, mode === 'extract' ? '-extract' : `-${label(o.pages)}`, 'pdf'), note: `${o.pages.length} pages` }
       }
       const base = sanitizeFilename(stem(f.name), 'file')
+      stage('save')
       const blob = await buildZip(outs.map((o) => ({ name: `${base}-${label(o.pages)}.pdf`, bytes: o.bytes })))
       return { blob, name: outName(f.name, '-split', 'zip'), note: `${outs.length} PDFs` }
     })

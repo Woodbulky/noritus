@@ -236,9 +236,9 @@ export default function PdfSign() {
   }
 
   const run = () =>
-    job.run(async (_p, signal) => {
+    job.run(async (progress, signal) => {
       const pages = scope === 'this' ? [page - 1] : Array.from({ length: doc!.numPages }, (_, i) => i)
-      const bytes = await runPdf('sign', { file: await readInput(file!), signature: { name: 'signature.png', bytes: sig!.bytes.slice() }, pages, rect }, undefined, signal)
+      const bytes = await runPdf('sign', { file: await readInput(file!), signature: { name: 'signature.png', bytes: sig!.bytes.slice() }, pages, rect }, progress, signal)
       return { blob: pdfBlob(bytes), name: outName(file!.name, '-signed', 'pdf') }
     })
 

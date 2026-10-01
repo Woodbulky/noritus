@@ -10,7 +10,7 @@ type Out<K extends OpName> = Awaited<ReturnType<(typeof Ops)[K]>>
  * transferred (so re-read files for the next run). Aborting terminates the
  * worker and rejects with an AbortError.
  */
-export function runPdf<K extends OpName>(op: K, arg: Arg<K>, onProgress?: (fraction: number) => void, signal?: AbortSignal) {
+export function runPdf<K extends OpName>(op: K, arg: Arg<K>, onProgress?: (fraction: number | null) => void, signal?: AbortSignal) {
   return new Promise<Out<K>>((resolve, reject) => {
     const worker = new Worker(new URL('./pdf.worker.ts', import.meta.url), { type: 'module' })
     const end = () => {
@@ -34,6 +34,7 @@ export function runPdf<K extends OpName>(op: K, arg: Arg<K>, onProgress?: (fract
       reject(new Error('Something went wrong while working on your file. Try again, or reload the page.'))
     }
     worker.postMessage({ op, arg }, buffers(arg))
+    onProgress?.(null) // the input is read; the work has started
   })
 }
 

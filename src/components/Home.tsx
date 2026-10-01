@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { CATEGORIES, TOOLS, type Tool } from '../tools'
 import { filterTools } from '../lib/search'
 import Icon from './Icon'
+import { useFlip } from './useFlip'
 import { Mark } from './Logo'
 
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -14,6 +15,7 @@ function ToolCard({ tool, i }: { tool: Tool; i: number }) {
     <a
       href={`/${tool.slug}`}
       className={`tool-card tone-${tool.category.toLowerCase()}${tool.slug === 'pdf-merge' ? ' featured' : ''}`}
+      data-flip={tool.slug}
       style={{ '--i': i } as React.CSSProperties}
     >
       <div className="card-top">
@@ -35,6 +37,10 @@ function Toolbox() {
   const [cat, setCat] = useState('all')
   const [query, setQuery] = useState('')
   const [expanded, setExpanded] = useState(false)
+  // After the first filter change, cards fade in quickly instead of replaying the staggered entrance.
+  const [settled, setSettled] = useState(false)
+  const grid = useRef<HTMLDivElement>(null)
+  useFlip(grid, 240)
   const results = filterTools(TOOLS, cat, query)
   const filtered = cat !== 'all' || query.trim() !== ''
   const shown = expanded || filtered ? results : results.slice(0, FEATURED)
@@ -55,7 +61,7 @@ function Toolbox() {
       <div className="tool-controls" data-reveal>
         <div className="tabs" role="group" aria-label="Filter tools by category">
           {CATEGORIES.map(([id, name]) => (
-            <button key={id} className={id === cat ? 'tab active' : 'tab'} aria-pressed={id === cat} onClick={() => setCat(id)}>
+            <button key={id} className={id === cat ? 'tab active' : 'tab'} aria-pressed={id === cat} onClick={() => (setCat(id), setSettled(true))}>
               {name}
               {id === 'all' && <span className="count">{TOOLS.length}</span>}
             </button>
@@ -63,10 +69,10 @@ function Toolbox() {
         </div>
         <label className="search-wrap">
           <Icon name="search" />
-          <input type="search" placeholder="Find a little helper…" aria-label="Search the toolbox" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input type="search" placeholder="Find a little helper…" aria-label="Search the toolbox" value={query} onChange={(e) => (setQuery(e.target.value), setSettled(true))} />
         </label>
       </div>
-      <div className="tools-grid" aria-live="polite">
+      <div className={settled ? 'tools-grid settled' : 'tools-grid'} aria-live="polite" ref={grid}>
         {shown.length ? (
           shown.map((t, i) => <ToolCard key={t.slug} tool={t} i={i} />)
         ) : (
@@ -75,7 +81,7 @@ function Toolbox() {
       </div>
       {!filtered && (
         <div className="tools-bottom">
-          <button className="text-link" onClick={() => setExpanded(!expanded)}>
+          <button className="text-link" onClick={() => (setExpanded(!expanded), setSettled(true))}>
             {expanded ? (
               <>
                 Show the essentials <span>↑</span>

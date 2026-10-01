@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Dropzone, FileRows, Room, RunPanel } from '../../components/Tool'
 import { useJob } from '../../components/useJob'
+import { useFlip } from '../../components/useFlip'
 import { outName, pdfBlob } from '../../lib/files'
 import { openPdf, thumbnail } from '../../lib/pdfjs'
 import { readInput, runPdf } from '../../lib/runPdf'
@@ -25,6 +26,8 @@ export default function PdfOrganize() {
   const [drag, setDrag] = useState<number | null>(null)
   const [over, setOver] = useState<number | null>(null)
   const job = useJob(file, pages)
+  const grid = useRef<HTMLDivElement>(null)
+  useFlip(grid)
 
   // Open the PDF, list its pages, then draw thumbnails one by one.
   const choose = (f: File | null) => {
@@ -68,8 +71,8 @@ export default function PdfOrganize() {
   const update = (i: number, p: Page | null) => setPages(pages.flatMap((x, j) => (j !== i ? [x] : p ? [p] : [])))
 
   const run = () =>
-    job.run(async (_progress, signal) => {
-      const bytes = await runPdf('organize', { file: await readInput(file!), pages }, undefined, signal)
+    job.run(async (progress, signal) => {
+      const bytes = await runPdf('organize', { file: await readInput(file!), pages }, progress, signal)
       return { blob: pdfBlob(bytes), name: outName(file!.name, '-organized', 'pdf'), note: `${pages.length} pages` }
     })
 
@@ -87,10 +90,11 @@ export default function PdfOrganize() {
               {error}
             </p>
           )}
-          <div className="page-grid">
+          <div className="page-grid" ref={grid}>
             {pages.map((p, i) => (
               <div
                 key={p.index}
+                data-flip={p.index}
                 className={`page-card${drag === i ? ' dragging' : ''}${over === i && drag !== null && drag !== i ? ' drop-before' : ''}`}
                 draggable
                 onDragStart={(e) => {
