@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { cpSync, readFileSync, writeFileSync } from 'node:fs'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -18,6 +18,9 @@ function cspSupabase(origin: string): Plugin {
     },
   }
 }
+
+// pdf.js decoders for JBIG2 / JPEG 2000 scans, served from our own origin.
+cpSync('node_modules/pdfjs-dist/wasm', 'public/pdfjs/wasm', { recursive: true, filter: (f) => !f.includes('quickjs') })
 
 export default defineConfig(({ mode }) => {
   const url = loadEnv(mode, process.cwd()).VITE_SUPABASE_URL

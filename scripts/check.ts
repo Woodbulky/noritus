@@ -4,6 +4,8 @@
  */
 import assert from 'node:assert/strict'
 import { filterTools } from '../src/lib/search'
+import './certify-check'
+import './pdf-check'
 
 const tools = [
   { name: 'Merge PDF', blurb: 'Bring pages together.', category: 'PDF' },

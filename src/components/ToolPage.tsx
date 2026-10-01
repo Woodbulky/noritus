@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { TOOLS, type Tool } from '../tools'
+import { CAT_LABEL, TOOLS, type Tool } from '../tools'
 import Icon from './Icon'
 
 // One lazy page per built tool, so each gets its own chunk.
@@ -9,8 +9,6 @@ const PAGES = new Map(
     return [t.slug, <Page key={t.slug} />]
   }),
 )
-
-const CAT_LABEL: Record<Tool['category'], string> = { PDF: 'PDF', Media: 'Audio & video', Image: 'Images', Generate: 'Generators', Utility: 'Utilities' }
 
 export default function ToolPage({ tool }: { tool: Tool }) {
   const page = PAGES.get(tool.slug)
