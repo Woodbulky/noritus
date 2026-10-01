@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import Icon, { type IconName } from '../../components/Icon'
 import { Room, Segmented } from '../../components/Tool'
 import { download, formatBytes } from '../../lib/files'
 import { formatTime } from '../../lib/media'
@@ -11,6 +12,11 @@ const FAQ: [string, string][] = [
 ]
 
 type Source = 'screen' | 'camera' | 'mic'
+const STAGE: Record<Source, [IconName, string, string]> = {
+  screen: ['record', 'Your screen', 'screen, window or tab to share'],
+  camera: ['video', 'Your camera', 'camera to use'],
+  mic: ['music', 'Your voice', 'microphone to use'],
+}
 type Take = { blob: Blob; name: string; url: string }
 
 const supported = typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices
@@ -119,7 +125,14 @@ export default function Recorder() {
         <div className="file-area">
           {live ? (
             <>
-              {live.stream.getVideoTracks().length ? <video ref={preview} className="media-preview" autoPlay muted playsInline /> : <div className="file-empty">Recording your microphone…</div>}
+              {live.stream.getVideoTracks().length ? (
+                <video ref={preview} className="media-preview" autoPlay muted playsInline />
+              ) : (
+                <div className="rec-stage">
+                  <Icon name="music" />
+                  <span>Recording your microphone…</span>
+                </div>
+              )}
               <p className="rec-status" role="status">
                 <span className="rec-dot" aria-hidden="true" /> Recording · {formatTime(Math.floor(elapsed))} · {formatBytes(size)}
               </p>
@@ -127,7 +140,11 @@ export default function Recorder() {
           ) : take ? (
             take.blob.type.startsWith('audio/') ? <audio className="media-preview" src={take.url} controls /> : <video className="media-preview" src={take.url} controls playsInline />
           ) : (
-            <div className="file-empty">Pick what to record, then press Start. Your browser will ask for permission.</div>
+            <div className="rec-stage">
+              <Icon name={STAGE[source][0]} />
+              <strong>{STAGE[source][1]} will show up here.</strong>
+              <span>Press Start recording. Your browser will ask which {STAGE[source][2]}.</span>
+            </div>
           )}
         </div>
         <div className="options">
