@@ -5,6 +5,7 @@ import { Redo, Undo } from './icons'
 import { MIN_FIT_RATIO, type Align, type TextCase, type TextStyle } from '../lib/layoutName'
 import { CORNERS } from '../lib/verify'
 import { useApp, type Field } from '../store/appStore'
+import { useKind } from '../kind'
 
 const CASES: { v: TextCase; label: string }[] = [
   { v: 'none', label: 'As typed' },
@@ -122,6 +123,7 @@ function FieldControls({ field, style }: { field: Field; style: TextStyle }) {
 }
 
 export default function StyleStep() {
+  const kind = useKind()
   const style = useApp((s) => s.style)
   const second = useApp((s) => s.second)
   const secondOn = useApp((s) => s.secondOn)
@@ -139,7 +141,7 @@ export default function StyleStep() {
       <div>
         <h1>Style the name</h1>
         <p className="lede">
-          Drag the green box on the certificate to place the name. Pull a corner to resize.
+          Drag the green box on the {kind.one} to place the name. Pull a corner to resize.
         </p>
       </div>
 
@@ -219,6 +221,7 @@ export default function StyleStep() {
  * square, wants a margin, and belongs out of the way of the artwork.
  */
 function QrControls() {
+  const kind = useKind()
   const qr = useApp((s) => s.qr)
   const patchQr = useApp((s) => s.patchQr)
   const verifyLink = useApp((s) => s.verifyLink)
@@ -230,8 +233,8 @@ function QrControls() {
     <>
       <div className="toggle">
         <div>
-          <div style={{ fontWeight: 600, fontSize: 13 }}>Verification QR</div>
-          <div className="hint">A unique ID per certificate, plus a verify.csv to check it</div>
+          <div style={{ fontWeight: 600, fontSize: 13 }}>{kind.qr}</div>
+          <div className="hint">A unique ID per {kind.one}, plus a verify.csv to check it</div>
         </div>
         <button
           type="button"
@@ -272,7 +275,7 @@ function QrControls() {
             />
             <span className="hint">
               {verifyLink.trim()
-                ? '{id} is replaced per certificate; without it the ID is appended.'
+                ? `{id} is replaced per ${kind.one}; without it the ID is appended.`
                 : 'Optional. Left blank, the QR carries the bare ID for checking against verify.csv.'}
             </span>
           </div>

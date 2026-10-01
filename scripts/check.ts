@@ -9,6 +9,7 @@ import './certify-check'
 import './pdf-check'
 import './media-check'
 import './image-check'
+import './util-check'
 
 const tools = [
   { name: 'Merge PDF', blurb: 'Bring pages together.', category: 'PDF' },

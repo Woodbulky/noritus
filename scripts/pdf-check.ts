@@ -101,4 +101,55 @@ for (const file of [a, rotated]) {
 await assert.rejects(ops.watermark({ file: a, text: 'नमस्ते', size: 40, opacity: 1, angle: 0, color: '#000000' }), /built-in font/)
 await assert.rejects(ops.merge({ files: [{ name: 'bad.pdf', bytes: new Uint8Array([1, 2, 3]) }] }), /“bad.pdf” could not be opened/)
 
+// --- forms ---
+const formDoc = await PDFDocument.create()
+const fp = formDoc.addPage([400, 400])
+const f = formDoc.getForm()
+f.createTextField('name').addToPage(fp, { x: 10, y: 300, width: 200, height: 20 })
+f.createCheckBox('agree').addToPage(fp, { x: 10, y: 250, width: 15, height: 15 })
+const dd = f.createDropdown('size')
+dd.addOptions(['S', 'M', 'L'])
+dd.addToPage(fp, { x: 10, y: 200, width: 100, height: 20 })
+const form = { name: 'form.pdf', bytes: await formDoc.save() }
+const fields = await ops.readForm({ file: form })
+assert.deepEqual(fields.map((x) => [x.name, x.kind]), [['name', 'text'], ['agree', 'check'], ['size', 'choice']])
+assert.deepEqual(fields[2].options, ['S', 'M', 'L'])
+const filled = { name: 'f.pdf', bytes: await ops.fillForm({ file: form, values: { name: 'Asha', agree: 'yes', size: 'M' }, flatten: false }) }
+assert.deepEqual((await ops.readForm({ file: filled })).map((x) => x.value), ['Asha', 'yes', 'M'])
+const flat = await ops.fillForm({ file: form, values: { name: 'Asha' }, flatten: true })
+assert.equal((await ops.readForm({ file: { name: 'x.pdf', bytes: flat } })).length, 0, 'flattened fields are gone')
+await assert.rejects(ops.fillForm({ file: form, values: { name: 'नमस्ते' }, flatten: false }), /built-in font/)
+
+// --- annotate, redact, OCR layer ---
+for (const file of [a, rotated]) {
+  const rect = { l: 0.1, t: 0.1, w: 0.4, h: 0.1 }
+  const marks: ops.Mark[] = (['text', 'highlight', 'whiteout', 'box', 'ellipse'] as const).map((kind) => ({ page: 0, kind, rect, color: '#ce4b2c', text: 'Hi\nthere', size: 12 }))
+  assert.ok((await ops.annotate({ file, marks })).length > file.bytes.length)
+  assert.ok((await ops.ocrLayer({ file, pages: [{ page: 0, words: [{ text: 'Hello', box: rect }, { text: 'नमस्ते', box: rect }] }] })).length > file.bytes.length)
+}
+const redacted = await pages(await ops.redact({ file: rotated, images: [{ page: 0, image: png }] }))
+assert.deepEqual([redacted[0].getWidth(), redacted[0].getHeight(), redacted[0].getRotation().angle], [800, 600, 0], 'redacted page keeps its displayed size, upright')
+assert.deepEqual((await pages(await ops.redact({ file: three, images: [] }))).map((p) => p.getWidth()), [100, 200, 300])
+
+// --- compress, metadata ---
+assert.equal((await pages(await ops.compress({ file: three, level: 'lossless' }))).length, 3)
+const metaDoc = await PDFDocument.create()
+metaDoc.addPage()
+metaDoc.setTitle('Secret plan')
+metaDoc.setAuthor('Asha')
+const withMeta = { name: 'm.pdf', bytes: await metaDoc.save() }
+assert.equal((await ops.readMeta({ file: withMeta })).Author, 'Asha')
+const edited = await ops.readMeta({ file: { name: 'e.pdf', bytes: await ops.writeMeta({ file: withMeta, meta: { Title: 'Plan ✓', Author: '' }, clear: false }) } })
+assert.deepEqual([edited.Title, edited.Author], ['Plan ✓', ''])
+const cleared = await ops.readMeta({ file: { name: 'c.pdf', bytes: await ops.writeMeta({ file: withMeta, meta: {}, clear: true }) } })
+assert.deepEqual([cleared.Title, cleared.Producer, cleared.created], ['', '', ''])
+
+// --- protect / unlock ---
+const locked = { name: 'l.pdf', bytes: await ops.protect({ file: three, password: 'tiger', allowPrint: true, allowCopy: false }) }
+await assert.rejects(ops.merge({ files: [locked] }), /password-protected/)
+await assert.rejects(ops.unlock({ file: locked, password: 'lion' }), /didn’t open/)
+await assert.rejects(ops.unlock({ file: locked, password: '' }), /needs its password/)
+assert.equal((await pages(await ops.unlock({ file: locked, password: 'tiger' }))).length, 3)
+await assert.rejects(ops.protect({ file: locked, password: 'x', allowPrint: true, allowCopy: true }), /password-protected/)
+
 console.log('pdf: ok')

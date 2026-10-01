@@ -370,6 +370,33 @@ audio.media-preview{background:none}
 .favicon-preview figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:8px;font-size:10px;color:var(--color-muted)}
 .favicon-preview img{display:block;border-radius:2px}
 .snippet{font:11px/1.6 ui-monospace,Consolas,monospace;resize:none;white-space:pre;overflow-x:auto}
+/* boxes on a page (annotate, redact) */
+.btn-small{min-height:36px;padding:6px 14px}
+.marks-stage{cursor:crosshair}
+.mark-box{position:absolute;cursor:move;touch-action:none;outline:1.5px dashed var(--color-teal);outline-offset:1px;overflow:visible;line-height:1.2;white-space:pre}
+.mark-box.picked{outline:2px solid var(--color-coral)}
+.mark-box:focus-visible{outline:3px solid var(--color-coral)}
+.mark-box.draft{outline:1.5px dashed var(--color-coral);background:rgba(206,75,44,.08);pointer-events:none}
+.mark-box .sign-handle{opacity:0;transition:opacity .15s}
+.mark-box.picked .sign-handle,.mark-box:hover .sign-handle{opacity:1}
+/* forms, lists of values */
+.form-fields{display:flex;flex-direction:column;gap:12px;margin-top:20px;max-height:60vh;overflow:auto;padding:2px}
+.mono{font:12px/1.55 ui-monospace,Consolas,monospace}
+textarea.mono{resize:vertical;white-space:pre;overflow-wrap:normal;overflow-x:auto}
+.kv{display:grid;grid-template-columns:auto 1fr auto;gap:8px 12px;align-items:center;font-size:12px;margin-top:16px}
+.kv>b{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--color-muted)}
+.kv code{word-break:break-all;font:12px/1.5 ui-monospace,Consolas,monospace}
+.kv .ok{color:var(--color-teal);font-weight:700}.kv .bad{color:var(--color-coral);font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:16px}
+.stats div{border:1px solid var(--color-line);border-radius:8px;background:var(--color-white);padding:12px}
+.stats b{display:block;font-family:var(--font-serif);font-weight:400;font-size:26px;letter-spacing:-.03em}
+.stats span{font-size:11px;color:var(--color-muted)}
+.diff{margin-top:16px;border:1px solid var(--color-line);border-radius:8px;background:var(--color-white);overflow:auto;max-height:65vh;font:12px/1.55 ui-monospace,Consolas,monospace}
+.diff div{white-space:pre-wrap;word-break:break-word;padding:0 10px 0 28px;position:relative}
+.diff div::before{position:absolute;left:10px;color:var(--color-muted)}
+.diff .add{background:#e3f1df}.diff .add::before{content:"+"}
+.diff .del{background:#f8e1da}.diff .del::before{content:"−"}
+.scan-video{display:block;width:100%;max-height:360px;margin-top:16px;border-radius:8px;background:#0f2622}
 
 /* ---------- privacy page ---------- */
 .prose{max-width:680px}

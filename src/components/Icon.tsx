@@ -29,6 +29,22 @@ const PATHS = {
   crop: '<path d="M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14"/>',
   resize: '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',
   star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+  form: '<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h3m2 0h3M8 16h3m2 0h3"/>',
+  highlight: '<path d="m9 11-5 5v4h4l5-5M9 11l6-6 4 4-6 6zM14 21h7"/>',
+  unlock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2M12 14v3"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+  redact: '<path d="M14 3H6a1 1 0 0 0-1 1v16h14V8zM14 3v5h5"/><path d="M8 11h8v3H8z" fill="currentColor"/><path d="M8 17h5"/>',
+  scan: '<path d="M3 8V4h4M17 4h4v4M21 16v4h-4M7 20H3v-4M7 9h10M7 12h10M7 15h6"/>',
+  text: '<path d="M4 6V4h16v2M12 4v16m-3 0h6"/>',
+  table: '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 9h18M3 14h18M9 9v11M15 9v11"/>',
+  barcode: '<path d="M4 5v14M7 5v14M10 5v10M13 5v14M17 5v10M20 5v14M10 18v1M17 18v1"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9m-4 4 3 3m-6 0 2 2"/>',
+  braces: '<path d="M8 4H7a2 2 0 0 0-2 2v4l-2 2 2 2v4a2 2 0 0 0 2 2h1M16 4h1a2 2 0 0 1 2 2v4l2 2-2 2v4a2 2 0 0 1-2 2h-1"/>',
+  diff: '<path d="M7 4v6M4 7h6M14 17h6M5 20 19 4"/>',
+  count: '<path d="M4 7h16M4 12h10M4 17h13"/>',
+  card: '<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="11" r="2"/><path d="M5 16a3 3 0 0 1 6 0M14 10h5M14 14h3"/>',
+  ticket: '<path d="M3 7a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-3a2 2 0 0 0 0-4zM14 5v14"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
 }
 
 export type IconName = keyof typeof PATHS

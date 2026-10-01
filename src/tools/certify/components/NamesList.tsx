@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../store/appStore'
+import { useKind } from '../kind'
 import { Close, Download, Pencil } from './icons'
 
 export type RowIssue = { missing: string[]; atMin: boolean }
@@ -15,6 +16,7 @@ type Props = {
  * pencil) to rename in place, and download just that one certificate.
  */
 export default function NamesList({ issues, duplicates }: Props) {
+  const kind = useKind()
   const names = useApp((s) => s.names)
   const idx = useApp((s) => s.idx)
   const setIdx = useApp((s) => s.setIdx)
@@ -121,7 +123,7 @@ export default function NamesList({ issues, duplicates }: Props) {
               type="button"
               className="icon-btn"
               disabled={busy}
-              aria-label={`Download the certificate for ${name}`}
+              aria-label={`Download the ${kind.one} for ${name}`}
               onClick={(e) => {
                 e.stopPropagation()
                 generateOne(i)

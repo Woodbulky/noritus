@@ -108,7 +108,7 @@ export function Dropzone({ accept, multiple, what, onFiles }: { accept: string; 
         <strong>{head}</strong>
         <p>{sub}</p>
         <p style={{ marginTop: 10 }}>{what} · Kept in this tab</p>
-        <input type="file" accept={accept} multiple={multiple} aria-label={`Choose ${what}`} onChange={(e) => (take([...(e.target.files ?? [])]), (e.target.value = ''))} />
+        <input type="file" accept={accept === '*/*' ? undefined : accept} multiple={multiple} aria-label={`Choose ${what}`} onChange={(e) => (take([...(e.target.files ?? [])]), (e.target.value = ''))} />
       </label>
       <div className="feedback" role="status">
         {note}
@@ -176,6 +176,21 @@ export function Segmented<T extends string | number>({ label, value, options, on
         ))}
       </div>
     </div>
+  )
+}
+
+/** Copies `text` to the clipboard and says so for a moment. */
+export function CopyButton({ text, label = 'Copy', className = 'text-link' }: { text: string; label?: string; className?: string }) {
+  const [done, setDone] = useState(false)
+  useEffect(() => {
+    if (!done) return
+    const id = setTimeout(() => setDone(false), 1500)
+    return () => clearTimeout(id)
+  }, [done])
+  return (
+    <button className={className} disabled={!text} onClick={() => navigator.clipboard.writeText(text).then(() => setDone(true))} aria-live="polite">
+      {done ? 'Copied ✓' : label}
+    </button>
   )
 }
 

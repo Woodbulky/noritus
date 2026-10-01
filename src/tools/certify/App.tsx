@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo } from 'react'
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo } from 'react'
 
 import Stepper from './components/Stepper'
 import TemplateStep from './components/TemplateStep'
@@ -13,8 +13,19 @@ import { layoutName, MIN_FIT_RATIO } from './lib/layoutName'
 import { missingGlyphs } from './lib/fonts'
 import { duplicateIndices } from '../../lib/sanitize'
 import { useApp } from './store/appStore'
+import { KINDS, KindContext } from './kind'
 
-export default function App() {
+/** The variant shown last; switching variants starts over so a certificate never shows up as an ID card. */
+let shown = 'certify'
+
+export default function App({ slug = 'certify' }: { slug?: string }) {
+  const kind = KINDS[slug]
+  // Before paint and before the font effect below, which reads the fresh state.
+  useLayoutEffect(() => {
+    if (shown === slug) return
+    shown = slug
+    useApp.setState({ ...useApp.getInitialState(), presets: useApp.getState().presets }, true)
+  }, [slug])
   const step = useApp((s) => s.step)
   const template = useApp((s) => s.template)
   const names = useApp((s) => s.names)
@@ -31,7 +42,7 @@ export default function App() {
 
   // Load the starting font (and any font restored from localStorage) once.
   useEffect(() => {
-    void setFont('name', style.fontId)
+    void setFont('name', useApp.getState().style.fontId)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- startup only
   }, [])
 
@@ -91,6 +102,7 @@ export default function App() {
   )
 
   return (
+    <KindContext value={kind}>
     <div className="certify">
       <div className="top">
         <Stepper />
@@ -119,7 +131,7 @@ export default function App() {
             <div className="stage-empty">
               <span>
                 <strong>No template yet</strong>
-                Drop a PNG, JPG or PDF on the left and your certificate appears here.
+                Drop a PNG, JPG or PDF on the left and your {kind.one} appears here.
               </span>
             </div>
           </section>
@@ -127,5 +139,6 @@ export default function App() {
       </div>
       <Toasts />
     </div>
+    </KindContext>
   )
 }

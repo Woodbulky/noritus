@@ -2,6 +2,7 @@ import Dropzone from './Dropzone'
 import { BUILTINS, builtinUrl } from '../lib/builtins'
 import { formatBytes } from '../lib/loadTemplate'
 import { useApp } from '../store/appStore'
+import { useKind } from '../kind'
 
 export default function TemplateStep() {
   const template = useApp((s) => s.template)
@@ -9,12 +10,13 @@ export default function TemplateStep() {
   const pickTemplate = useApp((s) => s.pickTemplate)
   const pickBuiltin = useApp((s) => s.pickBuiltin)
   const setStep = useApp((s) => s.setStep)
+  const kind = useKind()
 
   return (
     <section className="view">
       <div>
         <h1>Upload your template</h1>
-        <p className="lede">Use the certificate with the name area left blank.</p>
+        <p className="lede">Use your {kind.one} design with the name area left blank.</p>
       </div>
 
       {template && (
@@ -51,6 +53,7 @@ export default function TemplateStep() {
         </p>
       )}
 
+      {kind.builtins && (
       <div className="field">
         <span className="lbl">Or start from one of ours</span>
         <div className="tpl-grid">
@@ -75,6 +78,7 @@ export default function TemplateStep() {
           Each one lands with its name area already positioned, ready to restyle.
         </span>
       </div>
+      )}
 
       <div className="panel-foot">
         <button

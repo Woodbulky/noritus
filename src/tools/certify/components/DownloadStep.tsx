@@ -1,6 +1,7 @@
 import { formatBytes } from '../lib/loadTemplate'
 import { FILENAME_PATTERNS, type FilenamePattern } from '../../../lib/sanitize'
 import { useApp } from '../store/appStore'
+import { useKind } from '../kind'
 import type { RowIssue } from './NamesList'
 import { Check } from './icons'
 
@@ -55,18 +56,19 @@ export default function DownloadStep({ issues, duplicates }: Props) {
   const downloadVerifyCsv = useApp((s) => s.downloadVerifyCsv)
 
   const busy = progress !== null
+  const kind = useKind()
   const missing = issues.flatMap((it, i) => (it.missing.length > 0 ? [i] : []))
   const tight = issues.flatMap((it, i) => (it.atMin ? [i] : []))
   // Each certificate carries its own copy of the artwork.
   const zipEstimate = (template?.fileSize ?? 0) * 1.05 * names.length
-  const example = names.length > 0 ? stems()[0] : 'certificate'
+  const example = names.length > 0 ? stems()[0] : kind.one.replace(/ /g, '-').toLowerCase()
 
   return (
     <section className="view">
       <div>
-        <h1>Download certificates</h1>
+        <h1>Download {kind.many}</h1>
         <p className="lede">
-          {names.length} certificate{names.length === 1 ? '' : 's'} ready to generate.
+          {names.length} {names.length === 1 ? kind.one : kind.many} ready to generate.
         </p>
       </div>
 
@@ -118,7 +120,7 @@ export default function DownloadStep({ issues, duplicates }: Props) {
           <p className="hint" style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
             <span className="tag warn">Large</span>
             Every PDF carries its own copy of the artwork, so this ZIP is big and slow to build.
-            The combined PDF below holds the same {names.length} certificates in a fraction of the
+            The combined PDF below holds the same {names.length} {kind.many} in a fraction of the
             space.
           </p>
         )}
@@ -136,7 +138,7 @@ export default function DownloadStep({ issues, duplicates }: Props) {
         <div className="dl-card">
           <h3>Verification list</h3>
           <p>
-            Every certificate ID against its name and event. The ZIP already contains this file;
+            Every {kind.one} ID against its name and event. The ZIP already contains this file;
             publish it, or keep it to answer &ldquo;is this real?&rdquo; later.
           </p>
           <button
@@ -152,7 +154,7 @@ export default function DownloadStep({ issues, duplicates }: Props) {
 
       <div className="dl-card">
         <h3>One combined PDF</h3>
-        <p>Every certificate as a page in a single file. Good for printing.</p>
+        <p>Every {kind.one} as a page in a single file. Good for printing.</p>
         <button
           type="button"
           className="btn btn-ghost btn-block"

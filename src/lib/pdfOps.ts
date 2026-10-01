@@ -3,7 +3,7 @@
  * the Node checks. Every op takes one argument object plus a progress callback
  * and throws Errors whose message can be shown to the user as-is.
  */
-import { degrees, EncryptedPDFError, PDFDocument, rgb, StandardFonts, type PDFFont, type PDFImage, type PDFPage } from 'pdf-lib'
+import { BlendMode, degrees, EncryptedPDFError, PDFCheckBox, PDFDict, PDFDocument, PDFDropdown, PDFHexString, PDFName, PDFNumber, PDFOptionList, PDFRadioGroup, PDFRawStream, PDFTextField, rgb, StandardFonts, type PDFFont, type PDFImage, type PDFPage, type PDFRef } from 'pdf-lib'
 import { centredOrigin, jpegOrientation, normalizeAngle, pageLabel, parseRanges, toUser, visualSize, type NumberFormat } from './pages'
 
 export type Progress = (done: number, total: number) => void
@@ -11,11 +11,14 @@ export type Input = { name: string; bytes: Uint8Array }
 
 const noop: Progress = () => {}
 
+/** AES-256 files can trip pdf-lib's parser before it notices the encryption, so look for the trailer key too. */
+const encrypted = (bytes: Uint8Array) => new TextDecoder('latin1').decode(bytes.subarray(-65536)).includes('/Encrypt')
+
 async function open({ name, bytes }: Input) {
   try {
     return await PDFDocument.load(bytes, { updateMetadata: false })
   } catch (e) {
-    if (e instanceof EncryptedPDFError) throw new Error(`“${name}” is password-protected. Unlock it first, then try again.`)
+    if (e instanceof EncryptedPDFError || encrypted(bytes)) throw new Error(`“${name}” is password-protected. Unlock it first, then try again.`)
     throw new Error(`“${name}” could not be opened. It may be damaged, or not a PDF.`)
   }
 }
@@ -227,4 +230,247 @@ export async function sign(o: SignOptions) {
     page.drawImage(img, { ...v.at(o.rect.l * v.w, (1 - o.rect.t - o.rect.h) * v.h), width: w, height: h, rotate: degrees(v.r) })
   }
   return doc.save()
+}
+
+/** Placement as fractions of the displayed page, from its top-left corner. */
+export type Rect = { l: number; t: number; w: number; h: number }
+
+/** A Rect in displayed points: left, bottom, width, height. */
+const inPoints = (v: ReturnType<typeof view>, r: Rect) => ({ x: r.l * v.w, y: (1 - r.t - r.h) * v.h, w: r.w * v.w, h: r.h * v.h })
+
+export type FormField = { name: string; kind: 'text' | 'check' | 'choice' | 'radio'; value: string; options: string[]; multiline: boolean }
+
+/** The fillable fields of a PDF, in document order. Signature and button fields are left out. */
+export async function readForm({ file }: { file: Input }): Promise<FormField[]> {
+  const doc = await open(file)
+  return doc
+    .getForm()
+    .getFields()
+    .flatMap((f): FormField[] => {
+      const name = f.getName()
+      if (f instanceof PDFTextField) return [{ name, kind: 'text', value: f.getText() ?? '', options: [], multiline: f.isMultiline() }]
+      if (f instanceof PDFCheckBox) return [{ name, kind: 'check', value: f.isChecked() ? 'yes' : '', options: [], multiline: false }]
+      if (f instanceof PDFDropdown || f instanceof PDFOptionList) return [{ name, kind: 'choice', value: f.getSelected()[0] ?? '', options: f.getOptions(), multiline: false }]
+      if (f instanceof PDFRadioGroup) return [{ name, kind: 'radio', value: f.getSelected() ?? '', options: f.getOptions(), multiline: false }]
+      return []
+    })
+}
+
+/** Fills fields by name. `flatten` bakes the answers into the page so they can no longer be edited. */
+export async function fillForm({ file, values, flatten }: { file: Input; values: Record<string, string>; flatten: boolean }) {
+  const doc = await open(file)
+  const form = doc.getForm()
+  for (const [name, value] of Object.entries(values)) {
+    const f = form.getFieldMaybe(name)
+    try {
+      if (f instanceof PDFTextField) f.setText(value || undefined)
+      else if (f instanceof PDFCheckBox) {
+        if (value) f.check()
+        else f.uncheck()
+      } else if ((f instanceof PDFDropdown || f instanceof PDFOptionList || f instanceof PDFRadioGroup) && value) f.select(value)
+    } catch {
+      throw new Error(`“${name}” couldn’t take that answer. It may be longer than the field allows.`)
+    }
+  }
+  try {
+    form.updateFieldAppearances(await doc.embedFont(StandardFonts.Helvetica))
+    if (flatten) form.flatten()
+  } catch {
+    throw new Error('Some answers use characters the built-in font can’t draw. Use Latin letters, numbers and common punctuation.')
+  }
+  return doc.save()
+}
+
+export type MarkKind = 'text' | 'highlight' | 'whiteout' | 'box' | 'ellipse'
+export type Mark = { page: number; kind: MarkKind; rect: Rect; color: string; text?: string; size?: number }
+
+/** Text, highlights, whiteout and shapes, drawn into the pages as vector content. */
+export async function annotate({ file, marks }: { file: Input; marks: Mark[] }, progress = noop) {
+  const doc = await open(file)
+  const texts = marks.flatMap((m) => (m.kind === 'text' && m.text ? [m.text.replace(/\n/g, ' ')] : [])).join(' ')
+  const font = texts ? await standardFont(doc, texts) : null
+  marks.forEach((m, i) => {
+    const page = doc.getPage(m.page)
+    const v = view(page)
+    const p = inPoints(v, m.rect)
+    const rotate = degrees(v.r)
+    const color = hexColor(m.color)
+    if (m.kind === 'text') {
+      const size = m.size ?? 14
+      ;(m.text ?? '').split('\n').forEach((line, j) => {
+        if (line) page.drawText(line, { ...v.at(p.x + 2, p.y + p.h - size * (j + 0.85) * 1.2), size, font: font!, color, rotate })
+      })
+    } else if (m.kind === 'ellipse') {
+      page.drawEllipse({ ...v.at(p.x + p.w / 2, p.y + p.h / 2), xScale: p.w / 2, yScale: p.h / 2, borderColor: color, borderWidth: 2, rotate })
+    } else {
+      const paint = m.kind === 'highlight' ? { color, blendMode: BlendMode.Multiply } : m.kind === 'whiteout' ? { color: rgb(1, 1, 1) } : { borderColor: color, borderWidth: 2 }
+      page.drawRectangle({ ...v.at(p.x, p.y), width: p.w, height: p.h, rotate, ...paint })
+    }
+    progress(i + 1, marks.length)
+  })
+  return doc.save()
+}
+
+/**
+ * Pages listed in `images` are replaced by that picture (rendered with the
+ * boxes already painted in), so the covered content is really gone. Other
+ * pages are copied as they are.
+ */
+export async function redact({ file, images }: { file: Input; images: { page: number; image: Input }[] }, progress = noop) {
+  const src = await open(file)
+  const out = await PDFDocument.create()
+  const copied = await out.copyPages(src, src.getPageIndices())
+  for (const [i, page] of copied.entries()) {
+    const hit = images.find((x) => x.page === i)
+    if (hit) {
+      const v = view(src.getPage(i))
+      const [img] = await embedImage(out, hit.image)
+      out.addPage([v.w, v.h]).drawImage(img, { x: 0, y: 0, width: v.w, height: v.h })
+    } else out.addPage(page)
+    progress(i + 1, copied.length)
+  }
+  return out.save()
+}
+
+export type OcrWord = { text: string; box: Rect }
+
+/**
+ * Lays recognised words over each page as invisible text, so the PDF can be
+ * searched and copied while looking exactly the same.
+ */
+export async function ocrLayer({ file, pages }: { file: Input; pages: { page: number; words: OcrWord[] }[] }, progress = noop) {
+  const doc = await open(file)
+  const font = await doc.embedFont(StandardFonts.Helvetica)
+  pages.forEach(({ page: n, words }, i) => {
+    const page = doc.getPage(n)
+    const v = view(page)
+    for (const w of words) {
+      const p = inPoints(v, w.box)
+      let width = 0
+      try {
+        width = font.widthOfTextAtSize(w.text, 1)
+      } catch {
+        // ponytail: Latin text only; embed a bundled TTF via fontkit to layer other scripts.
+      }
+      if (!width) continue
+      const size = Math.max(1, Math.min(p.w / width, p.h * 1.3))
+      page.drawText(w.text, { ...v.at(p.x, p.y + p.h * 0.2), size, font, opacity: 0, rotate: degrees(v.r) })
+    }
+    progress(i + 1, pages.length)
+  })
+  return doc.save()
+}
+
+export type CompressLevel = 'lossless' | 'balanced' | 'strong'
+const PHOTO = { balanced: { side: 2000, quality: 0.72 }, strong: { side: 1400, quality: 0.5 } }
+const name = (s: string) => PDFName.of(s)
+
+/**
+ * Re-saves with object streams, which packs the file's structure. Above
+ * `lossless`, JPEG photos are scaled down to a longest side and re-encoded,
+ * kept only where that makes them smaller.
+ */
+export async function compress({ file, level }: { file: Input; level: CompressLevel }, progress = noop) {
+  const doc = await open(file)
+  if (level !== 'lossless' && typeof OffscreenCanvas !== 'undefined') {
+    const { side, quality } = PHOTO[level]
+    const photos = doc.context.enumerateIndirectObjects().filter((e): e is [PDFRef, PDFRawStream] => {
+      const o = e[1]
+      if (!(o instanceof PDFRawStream) || o.dict.get(name('Subtype')) !== name('Image')) return false
+      const cs = o.dict.get(name('ColorSpace'))
+      // ponytail: plain RGB/grey JPEGs only; Flate images and CMYK/ICC JPEGs are kept as they are.
+      return o.dict.get(name('Filter')) === name('DCTDecode') && (cs === name('DeviceRGB') || cs === name('DeviceGray')) && !o.dict.has(name('Decode'))
+    })
+    for (const [i, [ref, stream]] of photos.entries()) {
+      try {
+        const bmp = await createImageBitmap(new Blob([stream.contents as BlobPart], { type: 'image/jpeg' }))
+        const scale = Math.min(1, side / Math.max(bmp.width, bmp.height))
+        const w = Math.max(1, Math.round(bmp.width * scale))
+        const h = Math.max(1, Math.round(bmp.height * scale))
+        const canvas = new OffscreenCanvas(w, h)
+        canvas.getContext('2d')!.drawImage(bmp, 0, 0, w, h)
+        bmp.close()
+        const jpg = new Uint8Array(await (await canvas.convertToBlob({ type: 'image/jpeg', quality })).arrayBuffer())
+        if (jpg.length < stream.contents.length) {
+          const dict = stream.dict.clone(doc.context)
+          dict.set(name('Width'), PDFNumber.of(w))
+          dict.set(name('Height'), PDFNumber.of(h))
+          dict.set(name('ColorSpace'), name('DeviceRGB'))
+          dict.delete(name('DecodeParms'))
+          doc.context.assign(ref, PDFRawStream.of(dict, jpg))
+        }
+      } catch {
+        // A photo the browser can't decode stays as it was.
+      }
+      progress(i + 1, photos.length)
+    }
+  }
+  return doc.save({ useObjectStreams: true })
+}
+
+const INFO_KEYS = ['Title', 'Author', 'Subject', 'Keywords', 'Creator', 'Producer'] as const
+export type Meta = Record<(typeof INFO_KEYS)[number], string> & { created: string; modified: string }
+
+export async function readMeta({ file }: { file: Input }): Promise<Meta> {
+  const doc = await open(file)
+  const date = (d?: Date) => (d && !isNaN(+d) ? d.toISOString() : '')
+  return {
+    Title: doc.getTitle() ?? '',
+    Author: doc.getAuthor() ?? '',
+    Subject: doc.getSubject() ?? '',
+    Keywords: doc.getKeywords() ?? '',
+    Creator: doc.getCreator() ?? '',
+    Producer: doc.getProducer() ?? '',
+    created: date(doc.getCreationDate()),
+    modified: date(doc.getModificationDate()),
+  }
+}
+
+/**
+ * Writes the document properties; an empty value removes that property.
+ * `clear` removes every property and the dates. The XMP copy is always
+ * dropped, so viewers can't show stale values from it.
+ */
+export async function writeMeta({ file, meta, clear }: { file: Input; meta: Partial<Meta>; clear: boolean }) {
+  const doc = await open(file)
+  const ctx = doc.context
+  const found = ctx.trailerInfo.Info && ctx.lookup(ctx.trailerInfo.Info)
+  const info = found instanceof PDFDict ? found : ctx.obj({})
+  if (info !== found) ctx.trailerInfo.Info = ctx.register(info)
+  for (const k of INFO_KEYS) {
+    const v = clear ? '' : (meta[k] ?? '').trim()
+    if (v) info.set(name(k), PDFHexString.fromText(v))
+    else info.delete(name(k))
+  }
+  if (clear) ['CreationDate', 'ModDate', 'Trapped'].forEach((k) => info.delete(name(k)))
+  doc.catalog.delete(name('Metadata'))
+  return doc.save()
+}
+
+/** The pdf-lib fork that can encrypt, loaded only by these two ops so other tools don't carry it. */
+const secure = () => import('@cantoo/pdf-lib').then((m) => m.PDFDocument)
+
+/** AES-256. Without both permissions, a random owner password means the limits can't be lifted. */
+export async function protect({ file, password, allowPrint, allowCopy }: { file: Input; password: string; allowPrint: boolean; allowCopy: boolean }) {
+  await open(file) // plain-words errors for a damaged or already-locked file
+  const doc = await (await secure()).load(file.bytes, { updateMetadata: false })
+  const owner = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('')
+  doc.encrypt({
+    userPassword: password,
+    ownerPassword: allowPrint && allowCopy ? password : owner,
+    permissions: { printing: allowPrint ? 'highResolution' : false, copying: allowCopy, contentAccessibility: true, fillingForms: true, modifying: false, annotating: false, documentAssembly: false },
+  })
+  return doc.save()
+}
+
+/** Opens with the password and saves without encryption. */
+export async function unlock({ file, password }: { file: Input; password: string }) {
+  const Doc = await secure()
+  try {
+    return await (await Doc.load(file.bytes, { updateMetadata: false, password })).save()
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : ''
+    if (/password/i.test(msg)) throw new Error(password ? 'That password didn’t open it. Check it and try again.' : 'This PDF needs its password to open. Type it, then try again.')
+    throw new Error(`“${file.name}” could not be opened. It may be damaged, or not a PDF.`)
+  }
 }

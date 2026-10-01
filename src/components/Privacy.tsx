@@ -22,7 +22,7 @@ export default function Privacy() {
         </p>
         <h2>Some tools download an engine.</h2>
         <p>
-          Audio and video tools download a processing engine (ffmpeg) from jsDelivr, a public code CDN, the first time you use them. Like any website, jsDelivr sees that a
+          Audio and video tools download a processing engine (ffmpeg), and PDF OCR downloads a text-recognition engine (Tesseract) and a language file, from jsDelivr, a public code CDN, the first time you use them. Like any website, jsDelivr sees that a
           download happened. It never sees your files.
         </p>
         <h2>Hosting.</h2>

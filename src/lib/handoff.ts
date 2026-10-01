@@ -5,6 +5,7 @@ export function accepts(file: { name: string; type: string }, accept: string) {
   const name = file.name.toLowerCase()
   return accept.split(',').some((raw) => {
     const a = raw.trim().toLowerCase()
+    if (a === '*/*') return true
     if (a.startsWith('.')) return name.endsWith(a)
     if (a.endsWith('/*')) return file.type.startsWith(a.slice(0, -1))
     return file.type === a

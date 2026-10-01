@@ -26,4 +26,24 @@
   <url><loc>https://noritus.dpdns.org/image-crop</loc></url>
   <url><loc>https://noritus.dpdns.org/exif-remove</loc></url>
   <url><loc>https://noritus.dpdns.org/favicon-generator</loc></url>
+  <url><loc>https://noritus.dpdns.org/pdf-compress</loc></url>
+  <url><loc>https://noritus.dpdns.org/pdf-fill-form</loc></url>
+  <url><loc>https://noritus.dpdns.org/pdf-annotate</loc></url>
+  <url><loc>https://noritus.dpdns.org/pdf-redact</loc></url>
+  <url><loc>https://noritus.dpdns.org/pdf-protect</loc></url>
+  <url><loc>https://noritus.dpdns.org/pdf-unlock</loc></url>
+  <url><loc>https://noritus.dpdns.org/pdf-ocr</loc></url>
+  <url><loc>https://noritus.dpdns.org/pdf-to-text</loc></url>
+  <url><loc>https://noritus.dpdns.org/pdf-metadata</loc></url>
+  <url><loc>https://noritus.dpdns.org/id-cards</loc></url>
+  <url><loc>https://noritus.dpdns.org/event-passes</loc></url>
+  <url><loc>https://noritus.dpdns.org/invitations</loc></url>
+  <url><loc>https://noritus.dpdns.org/password-generator</loc></url>
+  <url><loc>https://noritus.dpdns.org/spreadsheet-convert</loc></url>
+  <url><loc>https://noritus.dpdns.org/barcode-scanner</loc></url>
+  <url><loc>https://noritus.dpdns.org/hash</loc></url>
+  <url><loc>https://noritus.dpdns.org/base64</loc></url>
+  <url><loc>https://noritus.dpdns.org/json-formatter</loc></url>
+  <url><loc>https://noritus.dpdns.org/text-diff</loc></url>
+  <url><loc>https://noritus.dpdns.org/word-counter</loc></url>
 </urlset>
