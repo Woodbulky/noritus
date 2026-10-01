@@ -15,6 +15,7 @@
     "@supabase/supabase-js": "^2.117.2",
     "fontkit": "^2.0.4",
     "jszip": "^3.10.2",
+    "libheif-js": "1.19.8",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.3.289",
     "react": "^19.2.8",

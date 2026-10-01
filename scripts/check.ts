@@ -7,6 +7,7 @@ import { filterTools } from '../src/lib/search'
 import './certify-check'
 import './pdf-check'
 import './media-check'
+import './image-check'
 
 const tools = [
   { name: 'Merge PDF', blurb: 'Bring pages together.', category: 'PDF' },

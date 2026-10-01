@@ -20,4 +20,10 @@
   <url><loc>https://noritus.dpdns.org/mute-video</loc></url>
   <url><loc>https://noritus.dpdns.org/recorder</loc></url>
   <url><loc>https://noritus.dpdns.org/qr-generator</loc></url>
+  <url><loc>https://noritus.dpdns.org/image-compress</loc></url>
+  <url><loc>https://noritus.dpdns.org/image-convert</loc></url>
+  <url><loc>https://noritus.dpdns.org/image-resize</loc></url>
+  <url><loc>https://noritus.dpdns.org/image-crop</loc></url>
+  <url><loc>https://noritus.dpdns.org/exif-remove</loc></url>
+  <url><loc>https://noritus.dpdns.org/favicon-generator</loc></url>
 </urlset>
