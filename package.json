@@ -11,6 +11,7 @@
     "check": "esbuild scripts/check.ts --bundle --platform=node --format=esm --outfile=scripts/check.mjs --external:fontkit --log-level=warning && node scripts/check.mjs"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
     "@supabase/supabase-js": "^2.117.2",
     "fontkit": "^2.0.4",
     "jszip": "^3.10.2",

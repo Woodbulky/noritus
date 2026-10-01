@@ -24,6 +24,7 @@ const PATHS = {
   search: '<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/>',
   grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
   upload: '<path d="M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5"/>',
+  mute: '<path d="M11 5 6 9H3v6h3l5 4zM16 9l5 6m0-6-5 6"/>',
   play: '<path d="m7 3 14 9-14 9z"/>',
 }
 

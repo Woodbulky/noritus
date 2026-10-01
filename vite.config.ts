@@ -27,5 +27,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), tailwindcss(), cspSupabase(url ? new URL(url).origin : '')],
     worker: { format: 'es' },
+    // @ffmpeg/ffmpeg starts its own worker via new URL(…, import.meta.url); pre-bundling would break that path.
+    optimizeDeps: { exclude: ['@ffmpeg/ffmpeg'] },
   }
 })
